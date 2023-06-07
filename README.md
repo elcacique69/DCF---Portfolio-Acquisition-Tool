@@ -17,4 +17,4 @@ Calculate the Age and Remaining Lease Term at Closing Date
 
 ## Asset Register
 
-An Asset Register, also known as a Fixed Asset Register or Property Register, is a document or database that records and maintains detailed information about an organization's fixed assets or property. It serves as a centralized repository for tracking, managing, and accounting for the assets owned by a company, institution, or individual.
+An Asset Register, alternatively referred to as a Fixed Asset Register or Property Register, is a record-keeping system or digital database that comprehensively documents and manages extensive particulars concerning an organization's fixed assets or property. It acts as a centralized hub to monitor, control, and account for the assets owned by a company. By utilizing the Asset Register, we can analyze and assess how the Portfolio to be acquired impacts the existing records within the register.
