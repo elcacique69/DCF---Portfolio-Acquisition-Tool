@@ -7,4 +7,5 @@ Anonymized, to avoid possible conflicts with the company that owns the data. (Ca
 # Collumns names
 
 ## To be done in the code
-Calculate the age at the Closing Date
+Calculate the Age at Closing Date
+Calculate the Remaining Lease Term at Closing Date
