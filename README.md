@@ -3,3 +3,8 @@ This tool aims to provide comprehensive stress testing and scenario analysis cap
 
 # Data Set
 Anonymized, to avoid possible conflicts with the company that owns the data. (Carlos Gonzalez 07/06/2023)
+
+# Collumns names
+
+## To be done in the code
+Calculate the age at the Closing Date
