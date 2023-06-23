@@ -52,7 +52,7 @@ def bank_convenants(path_df,
     df_containers_expensives = df_portfolio[df_portfolio['Purchase Price'] > MIN_PRICE]
 
 
-    ### FALTA
+    ### FALTA Agregar codigo
 
 
     manufacturer_list = ["CIMC", "Singamas", "Maersk", "Dong Fang", "CXI", "Seabox",
