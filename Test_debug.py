@@ -1,12 +1,7 @@
 # Import the necessary libraries
 import ssl # Provides SSL support for secure connections
 import pandas as pd # Data manipulation and analysis library
-import numpy as np # Numerical computing library
-from tabulate import tabulate # Creates formatted tables
-import matplotlib.pyplot as plt # Data visualization library
-from datetime import datetime, timedelta # Date and time handling
-import quandl # Access to financial and economic data
-from openpyxl import load_workbook # Load and edit Excel workbooks
+from datetime import datetime # Date and time handling
 
 # Disable SSL verification for HTTPS connections
 ssl._create_default_https_context = ssl._create_unverified_context
