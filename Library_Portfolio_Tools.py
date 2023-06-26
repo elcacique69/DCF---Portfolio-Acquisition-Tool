@@ -59,7 +59,7 @@ def bank_convenants(path_df,
                      "China Shipping Container Lines (CSCL)", "Textainer Group Holdings Limited",
                      "COSCO Shipping Development", "Hoover Ferguson Group"]
     
-    df_not_manuf = df[~df['Manufacturer'].isin(manufacturer_list)]
+    df_not_manuf = df_portfolio[~df_portfolio['Manufacturer'].isin(manufacturer_list)]
 
     return [df_portfolio, df_containers_expensives, warning_drowdown]
 
