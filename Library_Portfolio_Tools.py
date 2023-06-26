@@ -62,4 +62,3 @@ def bank_convenants(path_df,
     df_not_manuf = df_portfolio[~df_portfolio['Manufacturer'].isin(manufacturer_list)]
 
     return [df_portfolio, df_containers_expensives, warning_drowdown]
-
