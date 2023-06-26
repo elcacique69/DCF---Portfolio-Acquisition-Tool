@@ -1,7 +1,13 @@
 # Import the necessary libraries
 import ssl # Provides SSL support for secure connections
 import pandas as pd # Data manipulation and analysis library
-from datetime import datetime # Date and time handling
+import numpy as np # Numerical computing library
+from tabulate import tabulate # Creates formatted tables
+import matplotlib.pyplot as plt # Data visualization library
+from datetime import datetime, timedelta # Date and time handling
+import quandl # Access to financial and economic data
+from openpyxl import load_workbook # Load and edit Excel workbooks
+import xlsxwriter
 
 # Disable SSL verification for HTTPS connections
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -188,8 +194,8 @@ container_types = ["20'DC", "40'DC", "40'HC"]
 container_sum_data = []
 for container_type in container_types:
     df_container_type = df_off_lease[df_off_lease['Type'] == container_type]
-    sum_purchase_price = df_container_type['Purchase Price'].sum()
-    container_sum_data.append({'Metric': f'{container_type} Purchase Price', 'Value': sum_purchase_price})
+    sum_purchase_price = df_container_type['NBV'].sum()
+    container_sum_data.append({'Metric': f'{container_type} NBV', 'Value': sum_purchase_price})
 
 # Data Frame for the Container Type sum
 df_container_type_sum = pd.DataFrame(container_sum_data)
@@ -204,6 +210,6 @@ writer = pd.ExcelWriter(export_path_off_leased, engine='xlsxwriter')
 df_off_lease.to_excel(writer, sheet_name='Non Leased Equipment', index=False)
 df_dashboard.to_excel(writer, sheet_name='Dashboard', index=False)
 
-df_container_type_sum.to_excel(writer, sheet_name='Dashboard', startrow=dashboard_df.shape[0]+2, index=False)
+df_container_type_sum.to_excel(writer, sheet_name='Dashboard', startrow=df_dashboard.shape[0]+2, index=False)
 
 writer.save()
