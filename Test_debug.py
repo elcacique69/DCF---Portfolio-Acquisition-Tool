@@ -121,7 +121,7 @@ df_not_manuf = df_portfolio[~df_portfolio['Manufacturer'].isin(manufacturer_list
 
 # Export non-matching containers to Excel
 if not df_not_manuf.empty:
-    export_path = "/Users/carlosjosegonzalezacevedo/Documents/NEOMA/Thesis/DCF Container portfolio acquisition model/DCF---Portfolio-Acquisition-Tool/containers_wrong_manufacturer.xlsx"
+    export_path = "/Users/carlosjosegonzalezacevedo/Documents/02_NEOMA/01_Thesis/DCF Container portfolio acquisition model/DCF---Portfolio-Acquisition-Tool/containers_wrong_manufacturer.xlsx"
     sheet_name = "Wrong Manufacturer List"
     df_not_manuf.to_excel(export_path, index=False, sheet_name=sheet_name)
     print(f"BREACH: Non-matching containers exported to: {export_path} (Sheet: {sheet_name})")
@@ -181,7 +181,7 @@ else:
     print(f"No Off lease proportion breaches (Proportion {off_lease_proportion:,.2f}%)")
 
 # Specify the export file path for the new Excel file
-export_path_off_leased = "/Users/carlosjosegonzalezacevedo/Documents/NEOMA/Thesis/DCF Container portfolio acquisition model/off_Lease_List.xlsx"
+export_path_off_leased = "/Users/carlosjosegonzalezacevedo/Documents/02_NEOMA/01_Thesis/DCF Container portfolio acquisition model/off_Lease_List.xlsx"
 
 # Create a sample DataFrame for the Dashboard sheet
 dashboard_data = {
