@@ -10,22 +10,25 @@ ssl._create_default_https_context = ssl._create_unverified_context
 # Define the URL of the Excel file to be read
 xlsx_url = "https://raw.githubusercontent.com/elcacique69/DCF---Portfolio-Acquisition-Tool/main/Data_Set_Closing.xlsx"
 
-# Read the Excel file into DataFrames
+# Read the Excel file into DataFrame
 df_portfolio = pd.read_excel(xlsx_url, sheet_name="Planned Portfolio")
 
-# Closing Date
-closing_date = 2023,6,12
+# Convert the closing date to a datetime object
+closing_date = datetime(2023, 6, 12)
+
+# Convert the 'End Contract Date' column to datetime if it's not already in the correct format
+df_portfolio['End Contract Date'] = pd.to_datetime(df_portfolio['End Contract Date'])
 
 # New Remaining lease term in days
 df_portfolio['Remaining Lease Term (Days)'] = (df_portfolio['End Contract Date'] - closing_date).dt.days
 
-# Filter leased equipment in an Data Frame
+# Filter leased equipment in a DataFrame
 df_leased_equipment = df_portfolio[df_portfolio['Contract Type'] != "Off Lease"]
 
-# New collumn for Contract Revenues
+# New column for Contract Revenues
 df_leased_equipment['Contract Revenues'] = df_leased_equipment['Remaining Lease Term (Days)'] * df_leased_equipment['Per Diem (Unit)']
 
 # Calculate the total revenues for the contracts
 total_revenues = df_leased_equipment['Contract Revenues'].sum()
 
-print(total_revenues)
+print(f"Total Revenues under contract {total_revenues:,.2f}")
