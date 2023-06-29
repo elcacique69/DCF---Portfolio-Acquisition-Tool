@@ -135,7 +135,7 @@ df_new_containers = df_portfolio[df_portfolio['Vintage'] > 2019].copy()
 
 # Calculate remaining lease term
 closing_date = datetime.now()  # Assuming the closing_date is the current date
-df_new_containers['Remaining Lease Term'] = (df_new_containers['End Contract date'] - closing_date).dt.days
+df_new_containers['Remaining Lease Term'] = (df_new_containers['End Contract Date'] - closing_date).dt.days
 
 # Calculate weighted average remaining lease term
 weighted_average = (df_new_containers['Remaining Lease Term'] * df_new_containers['Purchase Price']).sum() / df_new_containers['Purchase Price'].sum()
@@ -213,3 +213,17 @@ df_dashboard.to_excel(writer, sheet_name='Dashboard', index=False)
 df_container_type_sum.to_excel(writer, sheet_name='Dashboard', startrow=df_dashboard.shape[0]+2, index=False)
 
 writer.save()
+
+# Revuenues under contract
+
+df_portfolio['End Contract Date'] = pd.to_datetime(df_portfolio['End Contract Date'])
+
+df_portfolio['Remaining Lease Term (Days)'] = (df_portfolio['End Contract Date'] - closing_date).dt.days
+
+total_revenues = (df_portfolio['Remaining Lease Term (Days)']
+                  * df_portfolio['Per Diem (Unit)']
+                  * (df_portfolio['Contract Type'] != "Off Lease")).sum()
+
+print(f"Total Revenues under contract: {total_revenues:,.2f} USD")
+
+# OPEX
