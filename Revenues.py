@@ -26,7 +26,6 @@ total_revenues = (df_portfolio['Remaining Lease Term (Days)']
 print(f"Total Revenues under contract: {total_revenues:,.2f}")
 
 # Residual Value Sales
-
 # Define the sale revenue values for each container type
 container_revenues = {
     '20\'DC': 1100,
@@ -38,7 +37,17 @@ container_revenues = {
 selling_age = 15
 
 # Calculate the age at the closing date
-df_portfolio['Age at Closing Date'] = closing_date.year - df_portfolio['Manufacturing Date']
+df_portfolio['Age at Closing Date'] = closing_date - df_portfolio['Manufacturing Date']
 
 # Calculate the age at the end of the contract
 df_portfolio['Age at End of Contract'] = df_portfolio['Age at Closing Date'] + df_portfolio['Remaining Lease Term (Days)'] // 365
+
+# Check if the age at the end of the contract is above 15 and set the value in the "Sell" column
+df_portfolio['Sell'] = df_portfolio['Age at End of Contract'] > 15
+
+# Calculate the total sale revenue for containers when they are 15 years old
+total_sale_revenue = sum(df_portfolio[df_portfolio['Sell']][df_portfolio['Type'] == container_type]['Remaining Lease Term (Days)'] // 365 * container_revenues[container_type] for container_type in container_revenues)
+
+for container_type in container_revenues:
+    sale_revenue = (df_portfolio[df_portfolio['Sell']][df_portfolio['Type'] == container_type]['Remaining Lease Term (Days)'] // 365 * container_revenues[container_type]).sum()
+    print(f"{container_type}: {sale_revenue:,.2f}")
