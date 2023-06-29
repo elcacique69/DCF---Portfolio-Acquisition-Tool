@@ -32,3 +32,24 @@ df_leased_equipment['Contract Revenues'] = df_leased_equipment['Remaining Lease 
 total_revenues = df_leased_equipment['Contract Revenues'].sum()
 
 print(f"Total Revenues under contract {total_revenues:,.2f}")
+
+print("NUEVO")
+
+import pandas as pd
+from datetime import datetime
+
+xlsx_url = "https://raw.githubusercontent.com/elcacique69/DCF---Portfolio-Acquisition-Tool/main/Data_Set_Closing.xlsx"
+
+df_portfolio = pd.read_excel(xlsx_url, sheet_name="Planned Portfolio")
+
+closing_date = datetime(2023, 6, 12)
+
+df_portfolio['End Contract Date'] = pd.to_datetime(df_portfolio['End Contract Date'])
+
+df_portfolio['Remaining Lease Term (Days)'] = (df_portfolio['End Contract Date'] - closing_date).dt.days
+
+total_revenues = (df_portfolio['Remaining Lease Term (Days)']
+                  * df_portfolio['Per Diem (Unit)']
+                  * (df_portfolio['Contract Type'] != "Off Lease")).sum()
+
+print(f"Total Revenues under contract: {total_revenues:,.2f}")
