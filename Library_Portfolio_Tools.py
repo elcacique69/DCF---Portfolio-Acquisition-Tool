@@ -1,23 +1,22 @@
-#### Here we the...
-
-import pandas as pd
-import numpy as np
-from tabulate import tabulate
-import matplotlib.pyplot as plt
-import time
-from datetime import datetime, timedelta
-import quandl
-from datetime import datetime
-from openpyxl import load_workbook
+# Import the necessary libraries
+import ssl # Provides SSL support for secure connections
+import pandas as pd # Data manipulation and analysis library
+import numpy as np # Numerical computing library
+from tabulate import tabulate # Creates formatted tables
+import matplotlib.pyplot as plt # Data visualization library
+from datetime import datetime as dt, timedelta # Date and time handling
+import quandl # Access to financial and economic data
+from openpyxl import load_workbook # Load and edit Excel workbooks
+#import xlsxwriter
 
 
 # FUNCTION BANK COVENANTS:
-
-
-def bank_convenants(path_df,
-                MIN_PRICE, 
-                MINIMAL_AMOUNT=3000000.0, 
-                FACILITY=35000000.0
+def bank_covenants(
+                    path_df,
+                    ADVANCE_RATE,
+                    closing_date,  
+                    MINIMAL_AMOUNT=3000000.0, 
+                    FACILITY=35000000.0
                 ):
     
     """This function imports a data frame and recovers the most expensive containers
@@ -27,42 +26,107 @@ def bank_convenants(path_df,
         facility: Covenant by default 35Mio 
     """
     
+    # Import data
     df_portfolio = pd.read_excel(path_df, sheet_name="Planned Portfolio")
-    df_asset_register = pd.read_excel(path_df, sheet_name="Updated Asset Register")
+    df_updated_asset_register = pd.read_excel(path_df, sheet_name="Updated Asset Register")
     df_debt = pd.read_excel(path_df, sheet_name="Debt")
 
-    # Calculate the Portfolio Purchase Price
-    purchase_price = df_portfolio['Purchase Price'].sum()
+    ####### COVENANTS ########
 
-    
-    # Outstanding Facility Amount
-    debt = df_debt['Drawdown'].sum()
-    outstanding_facility = FACILITY - debt
+    #########################################
+    ## 1) CONCENTRATION COVENANT:
+    #########################################
 
-    # If statement for Purchase Amount Covenant
-    if purchase_price > MINIMAL_AMOUNT:
-        if purchase_price <= outstanding_facility:
-            warning_drowdown = "The Drawdown minimal amount is respected"
+    # Calculate the sum of 'NBV' for the updated asset register
+    updated_asset_register_nbv = df_updated_asset_register['NBV'].sum()
+
+    # Define the list of Lessees and their concentration thresholds
+    dict_lessees = {
+        'MSC': 30,
+        'MAERSK': 30,
+        'CMA': 30,
+        'COSCOMERCU': 30,
+        'HAPAG': 30,
+        'EVERGREEN': 30,
+        'ONE': 30,
+        'ZIM': 15,
+        'MTT SHIP': 10,
+        'SITC': 10
+    }
+
+
+    # Iterate over each Lessee and check their NBV concentration
+    for lessee, threshold in dict_lessees.items():
+        # Filter the DataFrame for rows where 'Lessee' is the current Lessee
+        df_lessee = df_updated_asset_register[df_updated_asset_register['Lessee'] == lessee]
+
+        # Calculate the sum of 'NBV' for the current Lessee
+        nbv_sum = df_lessee['NBV'].sum() / updated_asset_register_nbv * 100
+
+        # Convenant test:
+        if nbv_sum >= threshold:
+            print(f"The leesse {lessee} is in breach for the contentration convenant {threshold}")
+            dict_concentration_breach = {lessee:df_lessee}
         else:
-            warning_drowdown = "BREACH: The purchase amount exceeds the facility capacity."
+            dict_concentration_breach = {}
+
+    if dict_concentration_breach == {}:
+        dict_concentration_breach = "No concentration convenant breach"
+
+
+    #########################################
+    ## 2) ADVANCE RATE COVENANT:
+    #########################################
+
+    # Updated debt
+    updated_debt = df_portfolio['Purchase Price'].sum() + df_debt['Drawdown'].sum()
+
+    # Calculate the closing advance rate as a percentage
+    closing_advance_rate = updated_debt / updated_asset_register_nbv * 100
+
+    # Check if the closing advance rate breaches the specified threshold
+    if closing_advance_rate > ADVANCE_RATE:
+        covenant_advance_rate = f"BREACH: The Advance Rate ({closing_advance_rate:,.2f}%) is above ({ADVANCE_RATE:,.2f}%)"
     else:
-        warning_drowdown = "BREACH: minimal amount for drawdown is 3,000,000.00 USD"
+        covenant_advance_rate = f"No Advance Rate breaches (Advance Rate {closing_advance_rate:,.2f}%)"
 
-    ### Df test recupera los containers más caros
-    df_containers_expensives = df_portfolio[df_portfolio['Purchase Price'] > MIN_PRICE]
+    #########################################
+    ## 3) AGE COVENANT ######################
+    #########################################
+
+    # AGE COVENANT
+    # This is when the Closing takes place 
+
+    # Convert the "Manufacturing Date" column to datetime if it's not already in datetime format
+    df_portfolio['Manufacturing Date'] = pd.to_datetime(df_portfolio['Manufacturing Date'])
+
+    # Calculate the age for each container row
+    df_portfolio['Age'] = (dt.strptime(closing_date, "%Y-%m-%d") - df_portfolio['Manufacturing Date']).dt.days
+
+    # Calculate the weighted age using the "Age" and "Purchase Price" columns
+    df_portfolio['Weighted Age (Years)'] = (df_portfolio['Age'] * df_portfolio['Purchase Price']/df_portfolio['Purchase Price'].sum()) / 365
+
+    # Calculate the weighted average age
+    weighted_average_age = df_portfolio['Weighted Age (Years)'].sum()
+
+    # Check if the weighted average age is above 9 and print a message
+    if weighted_average_age > 9:
+        covenant_weight_avg_age = f"BREACH: The weighted average age {weighted_average_age:,.2f} of the portfolio is above 9 years."
+    else:
+        covenant_weight_avg_age = "No Nbv weverage wieghted age breach"
 
 
-    ### FALTA Agregar codigo
+    #########################################
+    ## 4) 
+    #########################################
 
-
-    manufacturer_list = ["CIMC", "Singamas", "Maersk", "Dong Fang", "CXI", "Seabox",
-                     "China Shipping Container Lines (CSCL)", "Textainer Group Holdings Limited",
-                     "COSCO Shipping Development", "Hoover Ferguson Group"]
     
-    df_not_manuf = df_portfolio[~df_portfolio['Manufacturer'].isin(manufacturer_list)]
-<<<<<<< HEAD
-=======
-    df_not_manuf.to_excel()
->>>>>>> 4075392c0094bbd43b67bf5406f4b240558c9ed3
 
-    return [df_portfolio, df_containers_expensives, warning_drowdown]
+
+
+    return {'covenant_concentration':dict_concentration_breach,
+            'covenant_advance_rate': covenant_advance_rate,
+            'covenant_weight_avg_age': covenant_weight_avg_age}
+
+
+

@@ -49,10 +49,6 @@ for lessee, threshold in lessees.items():
     # Print the sum of 'NBV' for the current Lessee
     print(f"NBV concentration for {lessee}: {nbv_sum:,.2f}%")
 
-    # Check if the NBV concentration exceeds the threshold
-    if nbv_sum > threshold:
-        print(f"BREACH: {lessee} NBV concentration above {threshold}%!")
-
 # Check if there were any concentration breaches
 if all(nbv_sum <= threshold for lessee, threshold in lessees.items()):
     print("No concentration breaches have been observed.")
@@ -97,6 +93,9 @@ print(f"No Weighted NBV Average Age breaches (Age {weighted_average_age:.2f} yea
 if weighted_average_age > 9:
     print("BREACH: The weighted average age is above 9 years.")
 
+
+
+
 # NBV BY CEU
 
 # New TEU in the updated Asset Register (Planned Portfolio + Asset Register)
@@ -110,6 +109,9 @@ if ceu_purchase_price > 2900:
     print("BREACH: in contract the CEU price must be below 2900 USD")
 else:
     print(f"No CEU Purchase Price breaches (CEU price {ceu_purchase_price:,.2f} USD)")
+
+
+
 
 # MANUFACTURER COVENANT
 
@@ -214,6 +216,9 @@ df_container_type_sum.to_excel(writer, sheet_name='Dashboard', startrow=df_dashb
 
 writer.save()
 
+
+
+
 # Revuenues under contract
 
 df_portfolio['End Contract Date'] = pd.to_datetime(df_portfolio['End Contract Date'])
@@ -225,5 +230,8 @@ total_revenues = (df_portfolio['Remaining Lease Term (Days)']
                   * (df_portfolio['Contract Type'] != "Off Lease")).sum()
 
 print(f"Total Revenues under contract: {total_revenues:,.2f} USD")
+
+
+
 
 # OPEX
