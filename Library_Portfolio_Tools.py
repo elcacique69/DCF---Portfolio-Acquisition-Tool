@@ -11,7 +11,7 @@ from openpyxl import load_workbook # Load and edit Excel workbooks
 
 
 # FUNCTION BANK COVENANTS:
-def bank_covenants(
+def bank_eligibility_check(
                     path_df,
                     ADVANCE_RATE,
                     closing_date,  
@@ -30,6 +30,12 @@ def bank_covenants(
     df_portfolio = pd.read_excel(path_df, sheet_name="Planned Portfolio")
     df_updated_asset_register = pd.read_excel(path_df, sheet_name="Updated Asset Register")
     df_debt = pd.read_excel(path_df, sheet_name="Debt")
+
+    # Format dates:
+    closing_date = dt.strptime(closing_date, "%Y-%m-%d")
+    df_portfolio['Manufacturing Date'] = pd.to_datetime(df_portfolio['Manufacturing Date'])
+    df_portfolio['End Contract Date'] = pd.to_datetime(df_portfolio['End Contract Date'])
+
 
     ####### COVENANTS ########
 
@@ -97,14 +103,12 @@ def bank_covenants(
     # AGE COVENANT
     # This is when the Closing takes place 
 
-    # Convert the "Manufacturing Date" column to datetime if it's not already in datetime format
-    df_portfolio['Manufacturing Date'] = pd.to_datetime(df_portfolio['Manufacturing Date'])
-
+    
     # Calculate the age for each container row
-    df_portfolio['Age'] = (dt.strptime(closing_date, "%Y-%m-%d") - df_portfolio['Manufacturing Date']).dt.days
+    df_portfolio['Age at Closing Date'] = (closing_date - df_portfolio['Manufacturing Date']).dt.days / 365
 
     # Calculate the weighted age using the "Age" and "Purchase Price" columns
-    df_portfolio['Weighted Age (Years)'] = (df_portfolio['Age'] * df_portfolio['Purchase Price']/df_portfolio['Purchase Price'].sum()) / 365
+    df_portfolio['Weighted Age (Years)'] = df_portfolio['Age at Closing Date'] * df_portfolio['Purchase Price']/df_portfolio['Purchase Price'].sum()
 
     # Calculate the weighted average age
     weighted_average_age = df_portfolio['Weighted Age (Years)'].sum()
@@ -153,7 +157,7 @@ def bank_covenants(
 
     # Export non-matching containers to Excel
     if not df_not_manuf.empty:
-        export_path = "/Users/carlosjosegonzalezacevedo/Documents/02_NEOMA/01_Thesis/DCF Container portfolio acquisition model/DCF---Portfolio-Acquisition-Tool/containers_wrong_manufacturer.xlsx"
+        export_path = path_df.replace("Data_Set_Closing.xlsx", "containers_wrong_manufacturer.xlsx")
         sheet_name = "Wrong Manufacturer List"
         df_not_manuf.to_excel(export_path, index=False, sheet_name=sheet_name)
         covenant_manufacturer = f"BREACH: Non-matching containers exported to: {export_path} (Sheet: {sheet_name})"
@@ -166,10 +170,7 @@ def bank_covenants(
 
     # Filter containers manufactured after 2019
     df_new_containers = df_portfolio[df_portfolio['Vintage'] > 2019].copy()
-
-    # Convert closing_date to datetime
-    closing_date = pd.to_datetime(closing_date)
-    
+   
     # Calculate remaining lease term
     df_new_containers['Remaining Lease Term'] = (df_new_containers['End Contract Date'] - closing_date).dt.days
 
@@ -202,7 +203,8 @@ def bank_covenants(
         covenant_offlease_concentration = f"No Off lease proportion breaches (Proportion {off_lease_proportion:,.2f}%)"
 
     # Specify the export file path for the new Excel file
-    export_path_off_leased = "/Users/carlosjosegonzalezacevedo/Documents/02_NEOMA/01_Thesis/DCF Container portfolio acquisition model/off_Lease_List.xlsx"
+    ### To replace for company folder on implementation 
+    export_path_off_leased = path_df.replace("Data_Set_Closing.xlsx", "off_Lease_List.xlsx")
 
     # Create a sample DataFrame for the Dashboard sheet
     dashboard_data = {
@@ -229,14 +231,38 @@ def bank_covenants(
     else:
        covenant_financelease_concentration = f"No Finance lease proportion breaches (Proportion {finance_lease_proportion:,.2f}%)"
 
-    return {'4.a) Manufactured by an Acceptable Manufacturer': covenant_manufacturer,
-            '4.b) NBV Weighted Average Age of such Equipment': covenant_weight_avg_age,
-            '4.c) Average Remaining Lease Term of the such Equipment manufactured after 2019' : covenant_avg_lease,
-            '4.d) Total Purchase Price by CEU': covenant_nbv_ceu,
-            '5.19) Concentration Limits': dict_concentration_breach,
-            'Advance Rate cheking': covenant_advance_rate,
-            '5.13) OFF Lease portfolio NBV concentration' : covenant_offlease_concentration,
-            '5.17) Finance Lease portfolio NBV concentration' : covenant_financelease_concentration}
 
+    ##### New Features for Revenues:
+    # Calculate Remaining Lease Term (Days) using the vectorized operation
+    
+    df_portfolio['Remaining Lease Term (Days)'] = (df_portfolio['End Contract Date'] - closing_date).dt.days
+
+    # Calculate Age at Closing Date and Age at End of Contract
+
+    df_portfolio['Age at End of Contract'] = (df_portfolio['Age at Closing Date'] + df_portfolio['Remaining Lease Term (Days)']) / 365
+
+
+    # Calculate remaining years, annual revenue, and remaining life revenues
+    df_portfolio['Lifecycle Remaining Years'] = 15 - df_portfolio['Age at Closing Date']
+    df_portfolio['Annual Revenue'] = df_portfolio['Per Diem (Unit)'] * 365
+
+
+    #### Output
+    output = {"Covenants":{'4.a) Manufactured by an Acceptable Manufacturer': covenant_manufacturer,
+                            '4.b) NBV Weighted Average Age of such Equipment': covenant_weight_avg_age,
+                            '4.c) Average Remaining Lease Term of the such Equipment manufactured after 2019' : covenant_avg_lease,
+                            '4.d) Total Purchase Price by CEU': covenant_nbv_ceu,
+                            '5.19) Concentration Limits': dict_concentration_breach,
+                            'Advance Rate cheking': covenant_advance_rate,
+                            '5.13) OFF Lease portfolio NBV concentration' : covenant_offlease_concentration,
+                            '5.17) Finance Lease portfolio NBV concentration' : covenant_financelease_concentration},
+            "Portfolio":df_portfolio}
+    
+    return output 
+
+
+
+
+# FUNCTION 2 : 
 
 
