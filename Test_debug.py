@@ -216,9 +216,6 @@ df_container_type_sum.to_excel(writer, sheet_name='Dashboard', startrow=df_dashb
 
 writer.save()
 
-
-
-
 # Revuenues under contract
 
 df_portfolio['End Contract Date'] = pd.to_datetime(df_portfolio['End Contract Date'])
