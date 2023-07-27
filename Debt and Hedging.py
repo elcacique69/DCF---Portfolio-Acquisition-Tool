@@ -1,27 +1,16 @@
 # Library
 import pandas as pd
 
-# Data Frames
-xl = pd.ExcelFile('/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/Data_Set_Closing.xlsx')
-xls = pd.ExcelFile('/Users/carlosjosegonzalezacevedo/Documents/02_NEOMA/01_Thesis/Coding/01_DataFrames/SOFR.xlsx')
-
-df = xls.parse('Results')
-df_portfolio = xl.parse('Planned Portfolio')
-df_debt = xl.parse('Debt')
-
-# Constants
-MARGIN = 0.0235 #2.35 percent per annum
-ADJUSTMENT = 0.0026161
-SOFR = 0.0525
-REPAYMENT_RATE = 0.015
-NOTIONAL = 17395585.46
-NUM_PAYMENTS = 20 # 20 quarters meaning 5 years
-CAP = 0.03
-FLOOR = 0.0175
-DAYS = 90 / 365
 
 # Function for debt calculation
-def debt_payment_and_interest(initial_debt, repayment_amount, num_payments, SOFR, DAYS):
+def debt_payment_and_interest(
+                              path_df,
+                              NUM_PAYMENTS,
+                              REPAYMENT_RATE = 0.015,
+                              MARGIN = 0.0235, #2.35 percent per annum 
+                              ADJUSTMENT = 0.0026161,
+                              DAYS = 90/365,
+                             ):
     """
     This function calculates the repayment instalment and interest payment in function of the evolving debt
 
@@ -39,17 +28,45 @@ def debt_payment_and_interest(initial_debt, repayment_amount, num_payments, SOFR
     Returns:
     The function returns the remaining debt (float) and the total interest paid over the selected number of periods (float).
     """
+
+    # Import Data
+    # Data Frames
+    df_portfolio = pd.read_excel(path_df,
+                                 sheet_name='Planned Portfolio')
+    df_debt = pd.read_excel(path_df,
+                            sheet_name='Debt')
+    df_SOFR = pd.read_excel(path_df.replace('Data_Set_Closing.xlsx','SOFR.xlsx'),
+                            sheet_name='Results')
+
+    # To modify
+    SOFR = 0.0525
+
+    initial_debt = df_portfolio['Purchase Price'].sum()
+    repayment_amount = initial_debt * REPAYMENT_RATE
     new_debt = initial_debt
+
     total_interest = 0
-    for _ in range(num_payments):
-        interest = new_debt * ((MARGIN / 365 + SOFR + ADJUSTMENT) * DAYS)
+    for _ in range(NUM_PAYMENTS):
+        interest = new_debt * ((MARGIN/365 + SOFR + ADJUSTMENT) * DAYS)
         total_interest += interest
         new_debt = new_debt - repayment_amount
         new_debt = max(new_debt, 0)  # Ensure the debt doesn't become negative
-    return new_debt, total_interest
+
+    return {'initial_debt':initial_debt,
+            'new_debt':new_debt, 
+            'total_interest_paid':total_interest}
+
+
 
 # Function to calculate the Cap and floor rates and payments
-def calculate_hedge_payment(SOFR, CAP, FLOOR, NOTIONAL):
+def calculate_hedge_payment(
+                            path_df,
+                            NOTIONAL,
+                            NUM_PAYMENTS,
+                            FLOOR = 0.0175, 
+                            CAP = 0.03,
+                            RATE_DAY_COUNT_FRACTION = 90/360.0
+                            ):
     """
     This function calculates either. If the bank (seller) pay the borrower (buyer), in a above cap rate or if
     the borrower (seller) pay the bank (borrower), in a below floor rate situation.
@@ -63,27 +80,37 @@ def calculate_hedge_payment(SOFR, CAP, FLOOR, NOTIONAL):
     Returns:
     (float): The function returns the payment regarding if there is a CAP or FLOOR exit of the SWAP.
     """
-    day_count_fraction = 90 / 360.0
+
+    df_SOFR = pd.read_excel(path_df.replace('Data_Set_Closing.xlsx','SOFR.xlsx'),
+                            sheet_name='Results')
+
+    # To modify
+    SOFR = 0.0525
+
+    
     if SOFR > CAP:
-        payment = (SOFR - CAP) * NOTIONAL * day_count_fraction
+        payoff = (SOFR - CAP) * NOTIONAL * RATE_DAY_COUNT_FRACTION
     elif SOFR < FLOOR:
-        payment = (FLOOR - SOFR) * NOTIONAL * day_count_fraction
+        payoff = (FLOOR - SOFR) * NOTIONAL * RATE_DAY_COUNT_FRACTION
     else:
-        payment = 0
-    return payment
+        payoff = 0
+
+    return {'Hedge':payoff * NUM_PAYMENTS}
+
+
 
 # Calculate
-initial_debt = df_portfolio['Purchase Price'].sum()
-repayment_of_loan = initial_debt * REPAYMENT_RATE
 
-current_debt, total_interest = debt_payment_and_interest(initial_debt, repayment_of_loan, NUM_PAYMENTS, SOFR, DAYS)
-hedge_payment = calculate_hedge_payment(SOFR, CAP, FLOOR, NOTIONAL) * NUM_PAYMENTS
-payment_total = initial_debt - current_debt
-total_expense = (payment_total + total_interest) - hedge_payment
+path_df = r'C:\Users\camil\Documents\GitHub\DCF---Portfolio-Acquisition-Tool\Data_Set_Closing.xlsx'
+
+debt_and_interest = debt_payment_and_interest(path_df=path_df, NUM_PAYMENTS=20)
+hedge_payment = calculate_hedge_payment(path_df=path_df, NOTIONAL=17000000, NUM_PAYMENTS=20)['Hedge']
+payment_total = debt_and_interest['initial_debt'] - debt_and_interest['new_debt']
+borrowing_expenses = (payment_total + debt_and_interest['total_interest_paid']) - hedge_payment
 
 # Print Results
-print(f"Current debt: {current_debt:,.2f} USD")
+print(f"Current debt: {debt_and_interest['new_debt'] :,.2f} USD")
 print(f"Total debt Payment: {payment_total:,.2f} USD")
 print(f"Hedge receivable: {hedge_payment:,.2f} USD")
-print(f"Paid interest: {total_interest:,.2f} USD")
-print(f"Borrowing cost: {total_expense:,.2f} USD")
+print(f"Paid interest: {debt_and_interest['total_interest_paid']:,.2f} USD")
+print(f"Borrowing cost: {borrowing_expenses:,.2f} USD")
