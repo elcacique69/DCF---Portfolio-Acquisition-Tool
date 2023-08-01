@@ -1,45 +1,59 @@
+# Library
+
 import pandas as pd
 
-# Read data from Excel file into a DataFrame
-xl = pd.ExcelFile('/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/Data_Set_Closing.xlsx')
-path_portfolio = xl.parse('Planned Portfolio')
+# Function used to calculate the OPEX of 20'DC containers during their economic life
 
-# Calculate the total number of containers for each type
-container_counts = path_portfolio['Type'].value_counts()
+def opex_20_DC (
+          closing_date,
+          insurance_percentage,
+          agency_percentage,
+          handling_percentage
+          ):
 
-# Define the daily charges, cost percentages, and default annual costs
-storage_daily_charge = {
-    "20'DC": 0.55,
-    "40'DC": 1.10,
-    "40'HC": 1.10
-}
+    # Read data from Excel file into a DataFrame
+    xl = pd.ExcelFile('/Users/carlosjosegonzalezacevedo/Downloads/Data_Set_Closing (3).xlsx')
 
-public_liability_percentage = {
-    "20'DC": 0.02,
-    "40'DC": 0.02,
-    "40'HC": 0.02
-}
+    # Portfolio to be acquired
+    df_portfolio = xl.parse('Planned Portfolio')
 
-annual_cost_insurance_percentage = {
-    "20'DC": 0.25,
-    "40'DC": 0.25,
-    "40'HC": 0.25
-}
+    # Filter the data to only include 20'DC containers
+    df_portfolio = df_portfolio[df_portfolio['Type'] == "20'DC"]
 
-# Calculate the total storage cost for each container type
-storage_cost = {container_type: container_counts.get(container_type, 0) * storage_daily_charge[container_type] * 365
-                for container_type in storage_daily_charge}
+    closing_date = pd.to_datetime(closing_date)
 
-# Calculate the public liability cost for each container type
-public_liability_cost = {container_type: container_counts.get(container_type, 0) * public_liability_percentage[container_type] * path_portfolio['Purchase Price']
-                         for container_type in public_liability_percentage}
+    # Calculate the age for each container row in Years
+    df_portfolio['Age at Closing Date'] = (closing_date - df_portfolio['Manufacturing Date']).dt.days / 365
 
-# Calculate the annual insurance cost for each container type
-annual_insurance_cost = {container_type: container_counts.get(container_type, 0) * annual_cost_insurance_percentage[container_type] * path_portfolio['Purchase Price']
-                         for container_type in annual_cost_insurance_percentage}
+    # Calculate the age for each container row in Days
+    df_portfolio['Age at Closing Date Days'] = (closing_date - df_portfolio['Manufacturing Date']).dt.days
 
-# Calculate the sum of yearly expenses
-total_yearly_expenses = sum(storage_cost.values()) + sum(public_liability_cost.values()) + sum(annual_insurance_cost.values())
+    # Calculates the Remaining Lifecycle Years
+    df_portfolio['Lifecycle Remaining Years'] = 15 - df_portfolio['Age at Closing Date']
 
-# Print the total yearly expenses
-print("Total Yearly Expenses: ", total_yearly_expenses)
+    # Calculate the Remaining Lifecycle Days
+    df_portfolio['Lifecycle Remaining Days'] = 5475 - df_portfolio['Age at Closing Date Days']
+
+    # Calculate remaining years, annual revenue, and remaining life revenues
+    df_portfolio['Annual Revenue'] = df_portfolio['Per Diem (Unit)'] * 365
+    df_portfolio['Life Cycle Revenues'] = df_portfolio['Annual Revenue'] * df_portfolio['Lifecycle Remaining Years']
+    life_cycle_revenues = df_portfolio['Life Cycle Revenues'].sum()
+
+    # Calculate Storage cost for Off lease containers
+    # df_portfolio['Storage Cost'] = df_portfolio['Lifecycle Remaining Days'] * Storage_cost
+    # Life_cycle_storage_cost = df_portfolio['Storage Cost'].sum()
+
+    # Insurance cost x% of revenues
+    insurance_cost = life_cycle_revenues * insurance_percentage
+
+    # Agency Fees x% of revenues
+    agency_cost = life_cycle_revenues * agency_percentage
+
+    # Handlings cost x% of revenues
+    handling_cost = life_cycle_revenues * handling_percentage
+    
+    return(life_cycle_revenues, insurance_cost, agency_cost, handling_cost)
+
+revenues_OPEX = opex_20_DC(2023/6/12, 0.003, 0.007)
+
+print(revenues_OPEX)
