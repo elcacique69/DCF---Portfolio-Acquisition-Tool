@@ -8,7 +8,8 @@ def opex_20_DC (
           closing_date,
           insurance_percentage,
           agency_percentage,
-          handling_percentage
+          handling_percentage,
+          storage_cost
           ):
 
     # Read data from Excel file into a DataFrame
@@ -40,6 +41,22 @@ def opex_20_DC (
     life_cycle_revenues = df_portfolio['Life Cycle Revenues'].sum()
 
     # Calculate Storage cost for Off lease containers
+
+    # Off lease data frame
+    df_off_lease = df_portfolio[df_portfolio['Current Status'] == 'Off Lease']
+
+    # Off lease 20 feet data frame
+    df_off_lease_20 = df_off_lease[df_off_lease['Type'] == "'20'DC"]
+
+    # The number of Off lease 20 feet container
+    number_of_units = len(df_off_lease_20)
+
+    # The Off lease period will be 30 days
+    off_lease_period = 30
+
+    # Calculate the storage cost
+    total_storage_cost = number_of_units * (storage_cost * off_lease_period)
+
     # df_portfolio['Storage Cost'] = df_portfolio['Lifecycle Remaining Days'] * Storage_cost
     # Life_cycle_storage_cost = df_portfolio['Storage Cost'].sum()
 
@@ -54,6 +71,6 @@ def opex_20_DC (
     
     return(life_cycle_revenues, insurance_cost, agency_cost, handling_cost)
 
-revenues_OPEX = opex_20_DC(2023/6/12, 0.003, 0.007)
+revenues_OPEX = opex_20_DC(2023/6/12, 0.003, 0.007, 1, 0.55)
 
 print(revenues_OPEX)
