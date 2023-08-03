@@ -1,26 +1,15 @@
 # Library
-
 import pandas as pd
 
-# Function used to calculate the OPEX of 20'DC containers during their economic life
-
-def opex_20_DC (
-          closing_date,
-          insurance_percentage,
-          agency_percentage,
-          handling_percentage,
-          storage_cost
-          ):
-
+def opex_20_DC(closing_date, insurance_percentage, agency_percentage, handling_percentage, storage_cost):
     # Read data from Excel file into a DataFrame
-    xl = pd.ExcelFile('/Users/carlosjosegonzalezacevedo/Downloads/Data_Set_Closing (3).xlsx')
-
-    # Portfolio to be acquired
-    df_portfolio = xl.parse('Planned Portfolio')
+    df_portfolio = pd.read_excel('/Users/carlosjosegonzalezacevedo/Downloads/Data_Set_Closing (3).xlsx', sheet_name='Planned Portfolio')
 
     # Filter the data to only include 20'DC containers
     df_portfolio = df_portfolio[df_portfolio['Type'] == "20'DC"]
 
+    # Convert dates to datetime
+    df_portfolio['Manufacturing Date'] = pd.to_datetime(df_portfolio['Manufacturing Date'])
     closing_date = pd.to_datetime(closing_date)
 
     # Calculate the age for each container row in Years
@@ -41,36 +30,19 @@ def opex_20_DC (
     life_cycle_revenues = df_portfolio['Life Cycle Revenues'].sum()
 
     # Calculate Storage cost for Off lease containers
-
-    # Off lease data frame
     df_off_lease = df_portfolio[df_portfolio['Current Status'] == 'Off Lease']
-
-    # Off lease 20 feet data frame
-    df_off_lease_20 = df_off_lease[df_off_lease['Type'] == "'20'DC"]
-
-    # The number of Off lease 20 feet container
-    number_of_units = len(df_off_lease_20)
-
-    # The Off lease period will be 30 days
+    number_of_units = len(df_off_lease)
     off_lease_period = 30
-
-    # Calculate the storage cost
     total_storage_cost = number_of_units * (storage_cost * off_lease_period)
 
-    # df_portfolio['Storage Cost'] = df_portfolio['Lifecycle Remaining Days'] * Storage_cost
-    # Life_cycle_storage_cost = df_portfolio['Storage Cost'].sum()
-
-    # Insurance cost x% of revenues
+    # Calculate costs
     insurance_cost = life_cycle_revenues * insurance_percentage
-
-    # Agency Fees x% of revenues
     agency_cost = life_cycle_revenues * agency_percentage
-
-    # Handlings cost x% of revenues
     handling_cost = life_cycle_revenues * handling_percentage
-    
-    return(life_cycle_revenues, insurance_cost, agency_cost, handling_cost)
 
-revenues_OPEX = opex_20_DC(2023/6/12, 0.003, 0.007, 1, 0.55)
+    return(life_cycle_revenues, insurance_cost, agency_cost, handling_cost, total_storage_cost)
+
+
+revenues_OPEX = opex_20_DC('2023-06-12', 0.003, 0.007, 0.01, 0.55)
 
 print(revenues_OPEX)
