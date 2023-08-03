@@ -10,8 +10,8 @@ def opex(closing_date,
                ):
     
     """
-    Calculates the total operating expenses (OPEX) for containers of a specified type within a portfolio based on various factors
-    such as insurance fees, agency fees, bad debt, handling fees, and storage cost.
+    Calculates the total operating expenses (OPEX) for containers of a specified type within a portfolio based on:
+    insurance fees, agency fees, bad debt, handling fees, and storage cost.
 
     Parameters:
     - closing_date (str): The date at which the function is supposed to calculate the OPEX. Expected format 'YYYY-MM-DD'.
@@ -23,7 +23,7 @@ def opex(closing_date,
     Returns:
     - total_opex (float): The total operating expenses (OPEX) for the specified type of containers at the given closing date.
     """
-    
+
     # Read data from Excel file into a DataFrame
     df_portfolio = pd.read_excel('/Users/carlosjosegonzalezacevedo/Downloads/Data_Set_Closing (3).xlsx', sheet_name='Planned Portfolio')
 
