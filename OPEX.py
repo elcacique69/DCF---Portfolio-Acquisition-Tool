@@ -42,7 +42,6 @@ def opex_20_DC(closing_date, insurance_percentage, agency_percentage, handling_p
 
     return(life_cycle_revenues, insurance_cost, agency_cost, handling_cost, total_storage_cost)
 
-
 revenues_OPEX = opex_20_DC('2023-06-12', 0.003, 0.007, 0.01, 0.55)
 
 print(revenues_OPEX)
