@@ -232,3 +232,38 @@ print(f"Total Revenues under contract: {total_revenues:,.2f} USD")
 
 
 # OPEX
+
+def storage_cost(row, days_off_lease):
+    """
+    Function Name: storage_cost
+
+Parameters:
+
+row (dict): A dictionary containing details about the unit, with keys 'Current Status' and 'Type'. The 'Current Status'
+key is expected to have a value of 'Off Lease' or another status, and the 'Type' key should have a value such as "20'DC"
+to determine the type of the unit.
+
+off_lease_days (int or float): The number of days the unit has been off-lease. This value is multiplied by a rate to
+calculate the storage cost.
+
+Returns:
+
+float: The storage cost for the given unit. If the 'Current Status' is 'Off Lease', the cost is calculated based on the
+'Type' and the number of off_lease_days. If the unit's type is "20'DC", the cost is 0.55 times off_lease_days. For other
+types, the cost is 1.10 times off_lease_days. If the 'Current Status' is not 'Off Lease', the function returns 0.
+Description:
+The storage_cost function calculates the storage cost for a given unit based on its current status and type. If the unit
+is off-lease, the cost is computed using a specific rate depending on the type, multiplied by the number of days
+off lease. If the unit is not off-lease, the function returns 0, indicating no storage cost.
+
+    """
+    if row['Current Status'] == 'Off Lease':
+        if row['Type'] == "20'DC":
+            return 0.55 * days_off_lease
+        else:
+            return 1.10 * days_off_lease
+    else:
+        return 0
+
+
+df_portfolio['Storage Cost'] = df_portfolio.apply(lambda row: storage_cost(row, off_lease_days), axis=1)

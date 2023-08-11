@@ -1,63 +1,69 @@
 import pandas as pd
 
+# Import Data Set
+df_portfolio = \
+    pd.read_excel('/Users/carlosjosegonzalezacevedo/Downloads/Data_Set_Closing (3).xlsx',
+                  sheet_name='Planned Portfolio')
 
-def opex(closing_date, container_type, insurance_fees, agency_fees, bad_debt, handling_fees, storage_cost):
-    """
-    Calculates the total operating expenses (OPEX) for containers of a specified type within a portfolio based on:
-    insurance fees, agency fees, bad debt, handling fees, and storage cost.
+# Constants
+closing_date = pd.Timestamp('2023-06-12')
+insurance_fees = 0.003
+agency_fees = 0.007
+bad_debt = 0.005
+handling_fees = 0.002
+discount_rate = 0.0175
 
-    Parameters:
-    - closing_date (str): Date at which the function is supposed to calculate the OPEX "Expected format 'YYYY-MM-DD'".
-    - Type (str): container type to calculate the OPEX for. Expected values are: "20'DC", "40'DC", "40'HC".
-    - insurance_fees, agency_fees, bad_debt, handling_fees, storage_cost (float): Operational fees and costs.
+# Revenues
+df_portfolio['15 Years Date'] = df_portfolio['Manufacturing Date'] + pd.DateOffset(years=15)
+df_portfolio['Lifecycle Remaining Days'] = df_portfolio['15 Years Date'] - closing_date
+df_portfolio['Lifecycle Remaining Quarters'] = df_portfolio['Lifecycle Remaining Days'].dt.days / 90
 
-    Returns:
-    - total_opex (float): The total (OPEX) for the specified type of containers at the given closing date.
-    """
+# OPEX
+df_portfolio['Per Diem Cost Multiplier'] = insurance_fees + agency_fees + bad_debt + handling_fees
+df_portfolio['Total OPEX'] = df_portfolio['Per Diem (Unit)'] * df_portfolio['Per Diem Cost Multiplier']
+df_portfolio['Daily Cash Flow'] = df_portfolio['Per Diem (Unit)'] - df_portfolio['Total OPEX']
 
-    # Read data from Excel file into a DataFrame
-    df_portfolio = pd.read_excel(
-        '/Users/carlosjosegonzalezacevedo/Downloads/Data_Set_Closing (3).xlsx', sheet_name='Planned Portfolio'
-                                )
-    df_portfolio = df_portfolio[df_portfolio['Type'] == container_type]
+# Create a list to contain the data for the quarters
+quarterly_data = []
 
-    # Convert dates to datetime
-    df_portfolio['Manufacturing Date'] = pd.to_datetime(df_portfolio['Manufacturing Date'])
-    closing_date = pd.to_datetime(closing_date)
+# Iterate through each row in the original DataFrame
+for index, row in df_portfolio.iterrows():
+    for quarter in range(1, int(row['Lifecycle Remaining Quarters']) + 1):
+        # Calculate the days in the quarter
+        days_in_quarter = min(max(row['Lifecycle Remaining Days'].days - 90 * (quarter - 1), 0), 90)
 
-    # Calculate ages
-    df_portfolio['Age at Closing Date'] = (closing_date - df_portfolio['Manufacturing Date']).dt.days / 365
-    df_portfolio['Age at Closing Date Days'] = (closing_date - df_portfolio['Manufacturing Date']).dt.days
-    df_portfolio['Lifecycle Remaining Years'] = 15 - df_portfolio['Age at Closing Date']
-    df_portfolio['Lifecycle Remaining Days'] = 5475 - df_portfolio['Age at Closing Date Days']
+        # Calculate the revenue for the quarter
+        revenue_in_quarter = days_in_quarter * row['Daily Cash Flow']
 
-    # Calculate remaining years, annual revenue, and remaining life revenues
-    df_portfolio['Annual Revenue'] = df_portfolio['Per Diem (Unit)'] * 365
-    annual_revenue = df_portfolio['Annual Revenue'].sum()
+        # Add RV value if it's the last quarter for the container
+        rv_value = row['RV'] if quarter == int(row['Lifecycle Remaining Quarters']) else 0
 
-    # Calculate costs
-    insurance_cost = annual_revenue * insurance_fees
-    agency_cost = annual_revenue * agency_fees
-    bad_debt_cost = annual_revenue * bad_debt
-    handling_cost = annual_revenue * handling_fees
+        # Add the row to the quarterly data set
+        quarterly_data.append({
+            'Quarter': quarter,
+            'Days in Quarter': days_in_quarter,
+            'Revenue': revenue_in_quarter,
+            'RV': rv_value,
+            'Total Revenue with RV': revenue_in_quarter + rv_value
+        })
 
-    # Calculate storage cost for Off lease containers
-    df_off_lease = df_portfolio[df_portfolio['Current Status'] == 'Off Lease']
-    number_of_units = len(df_off_lease)
-    off_lease_period = 30
-    total_storage_cost = number_of_units * (storage_cost * off_lease_period)
+# Create a DataFrame with the quarterly data
+df_quarterly = pd.DataFrame(quarterly_data)
 
-    total_opex = insurance_cost + agency_cost + bad_debt_cost + handling_cost + total_storage_cost
+# Group by quarter and sum the revenue and RV
+quarterly_revenue = \
+    df_quarterly.groupby('Quarter').agg({'Revenue': 'sum', 'RV': 'sum', 'Total Revenue with RV': 'sum'}).reset_index()
 
-    return total_opex
+# Calculate NPV and add it as a new column
+quarterly_revenue['NPV'] = \
+    quarterly_revenue['Total Revenue with RV'] / (1 + discount_rate) ** quarterly_revenue['Quarter']
 
+# Calculate ROI
+investment = df_portfolio['Purchase Price'].sum()
+roi = (quarterly_revenue['NPV'].sum() - investment) / investment * 100
 
-TFC_OPEX = opex('2023-06-12', "20'DC",  0.003, 0.007, 0.005, 0.02, 0.55)
-FFC_OPEX = opex('2023-06-12', "40'DC", 0.003, 0.007, 0.005, 0.02, 1.10)
-FHC_OPEX = opex('2023-06-12', "40'HC", 0.003, 0.007, 0.005, 0.02, 1.10)
-OPEX = TFC_OPEX + FFC_OPEX + FHC_OPEX
+print(f'The ROI is: {roi:,.2f} %')
 
-print(f"The total 20'DC OPEX: {TFC_OPEX:,.2f} USD")
-print(f"The total 40'DC OPEX: {FFC_OPEX:,.2f} USD")
-print(f"The total 40'HC OPEX: {FHC_OPEX:,.2f} USD")
-print(f"The total OPEX: {OPEX:,.2f} USD")
+# Export the quarterly revenue to Excel
+quarterly_output_path = '/Users/carlosjosegonzalezacevedo/Downloads/Quarterly_Revenue.xlsx'
+quarterly_revenue.to_excel(quarterly_output_path, index=False)
