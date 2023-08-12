@@ -52,9 +52,9 @@ def debt_payment_and_interest(
         new_debt = new_debt - repayment_amount
         new_debt = max(new_debt, 0)  # Ensure the debt doesn't become negative
 
-    return {'initial_debt':initial_debt,
-            'new_debt':new_debt, 
-            'total_interest_paid':total_interest}
+    return {'initial_debt': initial_debt,
+            'new_debt': new_debt,
+            'total_interest_paid': total_interest}
 
 
 

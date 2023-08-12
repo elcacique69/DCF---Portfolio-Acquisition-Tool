@@ -23,6 +23,9 @@ df_portfolio['Per Diem Cost Multiplier'] = insurance_fees + agency_fees + bad_de
 df_portfolio['Total OPEX'] = df_portfolio['Per Diem (Unit)'] * df_portfolio['Per Diem Cost Multiplier']
 df_portfolio['Daily Cash Flow'] = df_portfolio['Per Diem (Unit)'] - df_portfolio['Total OPEX']
 
+# Repayment Installment
+repayment = df_portfolio['Purchase Price'].sum() * 0.0125
+
 # Create a list to contain the data for the quarters
 quarterly_data = []
 
@@ -44,6 +47,7 @@ for index, row in df_portfolio.iterrows():
             'Days in Quarter': days_in_quarter,
             'Revenue': revenue_in_quarter,
             'RV': rv_value,
+            'Debt Repayment': repayment,
             'Total Revenue with RV': revenue_in_quarter + rv_value
         })
 
@@ -61,6 +65,8 @@ quarterly_revenue['NPV'] = \
 # Calculate ROI
 investment = df_portfolio['Purchase Price'].sum()
 roi = (quarterly_revenue['NPV'].sum() - investment) / investment * 100
+
+print(investment)
 
 print(f'The ROI is: {roi:,.2f} %')
 
