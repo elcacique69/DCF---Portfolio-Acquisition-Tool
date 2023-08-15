@@ -253,7 +253,7 @@ def valuation(df_portfolio, discount_rate):
     return rv_value
 
 
-value = valuation(df_portfolio, 0.0235)
+value = valuation(df_portfolio, 0.0125)
 
 dcf = dcf_cashflow(df_portfolio, datetime.strptime('2023-06-30', '%Y-%m-%d'), 0.003, 0.007, 0.002, 0.005, 0.01794847,
                    "/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/DCF_QRev.xlsx")
