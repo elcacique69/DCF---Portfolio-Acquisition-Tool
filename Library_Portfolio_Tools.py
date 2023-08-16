@@ -367,15 +367,16 @@ def calculate_hedge_payment(
     """
 
     df_SOFR = pd.read_excel(path_df.replace('Data_Set_Closing.xlsx','SOFR.xlsx'),
-                            sheet_name='Results')
+                            sheet_name='SOFR')
+    df_SOFR.fillna(method='ffill', inplace=True)
     
     df_SOFR.sort_values(by='Effective Date', ascending=False, inplace=True)
-    df_SOFR['Rate (%)'] = df_SOFR['Rate (%)']/100
+    df_SOFR['SOFR'] = df_SOFR['SOFR']/100
 
     # Get the las available SOFR and the parameters for the GBM
-    SOFR_0 = df_SOFR['Rate (%)'][0]
-    mean_SOFR = np.mean(df_SOFR['Rate (%)'])
-    sd_SOFR = np.std(df_SOFR['Rate (%)'])
+    SOFR_0 = df_SOFR['SOFR'][0]
+    mean_SOFR = np.mean(df_SOFR['SOFR'])
+    sd_SOFR = np.std(df_SOFR['SOFR'])
     dt = 1/NUM_PAYMENTS  # The rates are already in quarterly
     n = NUM_PAYMENTS
 
