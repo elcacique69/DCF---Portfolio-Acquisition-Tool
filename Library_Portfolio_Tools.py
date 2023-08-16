@@ -2,11 +2,11 @@
 import ssl # Provides SSL support for secure connections
 import pandas as pd # Data manipulation and analysis library
 import numpy as np # Numerical computing library
-from tabulate import tabulate # Creates formatted tables
-import matplotlib.pyplot as plt # Data visualization library
+from tabulate import tabulate  # Creates formatted tables
+import matplotlib.pyplot as plt  # Data visualization library
 from datetime import datetime as dt, timedelta # Date and time handling
-import quandl # Access to financial and economic data
-from openpyxl import load_workbook # Load and edit Excel workbooks
+import quandl  # Access to financial and economic data
+from openpyxl import load_workbook  # Load and edit Excel workbooks
 #import xlsxwriter
 
 
@@ -329,17 +329,41 @@ def calculate_hedge_payment(
                             RATE_DAY_COUNT_FRACTION = 90/360.0
                             ):
     """
-    This function calculates either. If the bank (seller) pay the borrower (buyer), in a above cap rate or if
-    the borrower (seller) pay the bank (borrower), in a below floor rate situation.
-
     Parameters:
-    SOFR (float): Secured Overnight Financing Rate, which is used as the floating variable for cap or floor rate.
-    CAP (float): option that provides the buyer with the right to receive payments if the SOFR exceeds the CAP.
-    FLOOR (float): option that provides the buyer with the right to receive payments if the SOFR falls below the FLOOR.
-    NOTIONAL(float): amount which is hedge in the contract between the bank and borrower.
 
-    Returns:
-    (float): The function returns the payment regarding if there is a CAP or FLOOR exit of the SWAP.
+    path_df: A file path to the 'Data_Set_Closing.xlsx' Excel file.
+    NOTIONAL (float): Represents the notional amount for the Hedge.
+    NUM_PAYMENTS (integer): Indicated the number of payments in the hedge.
+    FLOOR (float): (default: 0.0175) is the lower boundary or floor rate for the SOFR.
+    CAP (float): (default: 0.03) is the upper boundary or cap rate for the SOFR.
+    RATE_DAY_COUNT_FRACTION: A fraction representing the portion of the year for which the rate is applicable.
+    The default value is 90/360.0, suggesting a quarterly rate.
+
+    Overview:
+
+    The function calculates the payment that needs to be made for the hedge based on the SOFR which is read from an
+    Excel file named 'SOFR.xlsx'. The function simulates future SOFR values using Monte Carlo methods and then
+    determines the discounted payoff based on these simulations, taking into account the cap and floor rates.
+
+    Details:
+
+    The function reads the 'SOFR.xlsx' Excel file and retrieves the SOFR data.
+    It sorts the SOFR data by the 'Effective Date' in descending order and converts the rate percentages from whole
+    numbers to decimals.
+    Initial parameters for the GBM (Geometric Brownian Motion) such as the most recent SOFR, mean and standard deviation
+    of the SOFR series, and time intervals dt are determined.
+    The function then simulates SOFR rates at each quarter (or as specified by NUM_PAYMENTS) using Monte Carlo.
+    The simulation is repeated 1000 times, and the average value for each payment period is calculated.
+    Using the simulated SOFR series, the function calculates the discounted payoff of the hedge. For each period:
+    If the SOFR is above the CAP, the payoff is based on the difference between the SOFR and the CAP.
+    If the SOFR is below the FLOOR, the payoff is based on the difference between the FLOOR and the SOFR.
+    If the SOFR lies between the CAP and the FLOOR, there's no payoff.
+    The calculated hedge payment (payoff) is returned in dictionary format with the key 'Hedge'.
+
+    Note: This function assumes a hedging strategy based on the SOFR and calculates the required hedge payment based on
+    a combination of current and simulated future rates. The simulated future rates are subject to stochastic processes,
+    and the Monte Carlo method is used to average out the simulations. The final payment takes into account caps and
+    floors, ensuring that the payment lies within predefined boundaries.
     """
 
     df_SOFR = pd.read_excel(path_df.replace('Data_Set_Closing.xlsx','SOFR.xlsx'),
@@ -352,14 +376,16 @@ def calculate_hedge_payment(
     SOFR_0 = df_SOFR['Rate (%)'][0]
     mean_SOFR = np.mean(df_SOFR['Rate (%)'])
     sd_SOFR = np.std(df_SOFR['Rate (%)'])
-    dt = 1/NUM_PAYMENTS # The rates are already in quarterly
+    dt = 1/NUM_PAYMENTS  # The rates are already in quarterly
     n = NUM_PAYMENTS
-    #np.random.seed(123) # This keeps the same random generator to obtain the same random numbers,
-                        # the values then will depend only on the SOFR series given
-    
+
+    # np.random.seed(123)
+    # This keeps the same random generator to obtain the same random numbers,
+    # the values then will depend only on the SOFR series given
 
     # Simulate the SOFR at each Q (NUM_PAYMENTS) Using Monte Carlo
-    SOFR_Q_Series = 0
+
+    sofr_q_series = 0
     for i in range(1000):
         Wt = np.random.normal(0, np.sqrt(dt), size=(n))
         SOFR_Q1 = 0
@@ -368,13 +394,13 @@ def calculate_hedge_payment(
         for i in range(n-1):
             SOFR_series.append(SOFR_series[i] * np.exp((mean_SOFR - (sd_SOFR**2)/2)*dt + sd_SOFR*Wt[i+1]))
 
-        SOFR_Q_Series += np.array(SOFR_series)
+        sofr_q_series += np.array(SOFR_series)
     
-    SOFR_Q_Series = SOFR_Q_Series/1000
+    sofr_q_series = sofr_q_series / 1000
         
     # Calculate the discounted Payoff
     payoff_discounted = 0
-    for p, SOFR_Q in enumerate(SOFR_Q_Series):
+    for p, SOFR_Q in enumerate(sofr_q_series):
         if p == 0:
             if SOFR_Q > CAP:
                 payoff_discounted += (SOFR_Q - CAP/100) * NOTIONAL * RATE_DAY_COUNT_FRACTION
@@ -390,7 +416,7 @@ def calculate_hedge_payment(
             else:
                 payoff_discounted += 0
 
-    return {'Hedge':payoff_discounted}
+    return {'Hedge': payoff_discounted}
 
 
 
