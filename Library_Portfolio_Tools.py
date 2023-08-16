@@ -344,19 +344,54 @@ def calculate_hedge_payment(
 
     df_SOFR = pd.read_excel(path_df.replace('Data_Set_Closing.xlsx','SOFR.xlsx'),
                             sheet_name='Results')
-
-    # To modify
-    SOFR = 0.0525
-
     
-    if SOFR > CAP:
-        payoff = (SOFR - CAP) * NOTIONAL * RATE_DAY_COUNT_FRACTION
-    elif SOFR < FLOOR:
-        payoff = (FLOOR - SOFR) * NOTIONAL * RATE_DAY_COUNT_FRACTION
-    else:
-        payoff = 0
+    df_SOFR.sort_values(by='Effective Date', ascending=False, inplace=True)
+    df_SOFR['Rate (%)'] = df_SOFR['Rate (%)']/100
 
-    return {'Hedge':payoff * NUM_PAYMENTS}
+    # Get the las available SOFR and the parameters for the GBM
+    SOFR_0 = df_SOFR['Rate (%)'][0]
+    mean_SOFR = np.mean(df_SOFR['Rate (%)'])
+    sd_SOFR = np.std(df_SOFR['Rate (%)'])
+    dt = 1/NUM_PAYMENTS # The rates are already in quarterly
+    n = NUM_PAYMENTS
+    #np.random.seed(123) # This keeps the same random generator to obtain the same random numbers,
+                        # the values then will depend only on the SOFR series given
+    
+
+    # Simulate the SOFR at each Q (NUM_PAYMENTS) Using Monte Carlo
+    SOFR_Q_Series = 0
+    for i in range(1000):
+        Wt = np.random.normal(0, np.sqrt(dt), size=(n))
+        SOFR_Q1 = 0
+        SOFR_Q1 += SOFR_0 * np.exp((mean_SOFR - (sd_SOFR**2)/2)*dt + sd_SOFR*Wt[0])
+        SOFR_series = [SOFR_Q1]
+        for i in range(n-1):
+            SOFR_series.append(SOFR_series[i] * np.exp((mean_SOFR - (sd_SOFR**2)/2)*dt + sd_SOFR*Wt[i+1]))
+
+        SOFR_Q_Series += np.array(SOFR_series)
+    
+    SOFR_Q_Series = SOFR_Q_Series/1000
+        
+    # Calculate the discounted Payoff
+    payoff_discounted = 0
+    for p, SOFR_Q in enumerate(SOFR_Q_Series):
+        if p == 0:
+            if SOFR_Q > CAP:
+                payoff_discounted += (SOFR_Q - CAP/100) * NOTIONAL * RATE_DAY_COUNT_FRACTION
+            elif SOFR_Q < FLOOR:
+                payoff_discounted += (FLOOR/100 - SOFR_Q) * NOTIONAL * RATE_DAY_COUNT_FRACTION
+            else:
+                payoff_discounted += 0
+        else:
+            if SOFR_Q > CAP:
+                payoff_discounted += (SOFR_Q - CAP/100) * NOTIONAL * RATE_DAY_COUNT_FRACTION * 1/((1 + SOFR_0)**(p))
+            elif SOFR_Q < FLOOR:
+                payoff_discounted += (FLOOR/100 - SOFR_Q) * NOTIONAL * RATE_DAY_COUNT_FRACTION * 1/((1 + SOFR_0)**(p))
+            else:
+                payoff_discounted += 0
+
+    return {'Hedge':payoff_discounted}
+
 
 
 # FUNCTION 4: CASHFLOW
