@@ -264,7 +264,7 @@ dcf_fc = fc_dcf_cashflow(df_portfolio,datetime.strptime('2023-06-30', '%Y-%m-%d'
                       "/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/FC_DCF_QRev.xlsx")
 
 dcf_sc = sc_dcf_cashflow(df_portfolio,
-                         0.003, 0.007, 0.002, 0.005, 0.01794847, 1,
+                         0.003, 0.007, 0.002, 0.005, 0.01794847, 0.06,
                       "/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/SC_DCF_QRev.xlsx")
 
 print(dcf)
