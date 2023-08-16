@@ -238,19 +238,21 @@ df_sc_dcf = \
     pd.read_excel('/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/SC_DCF_QRev.xlsx')
 
 
-def valuation(df_portfolio, discount_rate):
+def valuation(df_portfolio, annual_interest):
     investment = df_portfolio['Purchase Price'].sum()
     n = df_dcf.shape[0]
 
-    future_value = investment * (1 + discount_rate) ** n
+    future_value = investment * (1 + annual_interest * n)
 
     fc_npv = df_fc_dcf['NPV'].sum()
     sc_npv = df_sc_dcf['NPV'].sum()
     total_npv = fc_npv + sc_npv
 
     rv_value = future_value - total_npv
+    roi = (rv_value - df_portfolio['Purchase Price'].sum()) / df_portfolio['Purchase Price'].sum()
 
-    return rv_value
+    return {f"Value: {rv_value:,.2f} USD",
+            f"ROI: {roi:,.2f} %"}
 
 
 value = valuation(df_portfolio, 0.025)
@@ -262,12 +264,10 @@ dcf_fc = fc_dcf_cashflow(df_portfolio,datetime.strptime('2023-06-30', '%Y-%m-%d'
                       "/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/FC_DCF_QRev.xlsx")
 
 dcf_sc = sc_dcf_cashflow(df_portfolio,
-                         0.003, 0.007, 0.002, 0.005, 0.01794847, 0.06,
+                         0.003, 0.007, 0.002, 0.005, 0.01794847, 1,
                       "/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/SC_DCF_QRev.xlsx")
-
-
 
 print(dcf)
 print(dcf_fc)
 print(dcf_sc)
-print(f"value: {value:,.2f} USD")
+print(value)
