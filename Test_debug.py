@@ -222,16 +222,84 @@ df_portfolio['End Contract Date'] = pd.to_datetime(df_portfolio['End Contract Da
 
 df_portfolio['Remaining Lease Term (Days)'] = (df_portfolio['End Contract Date'] - closing_date).dt.days
 
+def dcf_contract(df_portfolio, closing_date, insurance_fees, agency_fees, handling_fees,
+                 bad_debt, management_fee, discount_rate, pd_ev, output_path, economic_life):
+
+    # Convertir a formato de fecha
+    df_portfolio['Closing Date'] = pd.to_datetime(df_portfolio['Closing Date'])
+    df_portfolio['End Contract Date'] = pd.to_datetime(df_portfolio['End Contract Date'])
+    df_portfolio['Manufacturing Date'] = pd.to_datetime(df_portfolio['Manufacturing Date'])
+
+    # Calcular el aniversario de 15 años
+    df_portfolio['15 Years Date'] = df_portfolio['Manufacturing Date'] + pd.DateOffset(years=15)
+
+    # Calcular las fechas de inicio y fin del Segundo Contrato (SC)
+    df_portfolio['SC Start Date'] = df_portfolio['End Contract Date'] + pd.DateOffset(days=1)
+    df_portfolio['SC End Date'] = df_portfolio['15 Years Date']
+
+    # Calcular las columnas de gastos operativos (OPEX)
+    df_portfolio['OPEX coefficient'] = insurance_fees + agency_fees + bad_debt + handling_fees + management_fee
+    df_portfolio['OPEX'] = df_portfolio['Per Diem (Unit)'] * df_portfolio['OPEX coefficient']
+    df_portfolio['FC Daily Cash Flow'] = df_portfolio['Per Diem (Unit)'] - df_portfolio['OPEX']
+    df_portfolio['SC Daily Cash Flow'] = df_portfolio['Per Diem (Unit)'] * (1 + pd_ev) - df_portfolio['OPEX']
+
+    # Crear un nuevo DataFrame con la columna "Revenue Date"
+    df_new = pd.DataFrame()
+
+    # Inicializar el número en 1 y la fecha de inicio como 90 días después de la primera "Closing Date"
+    t_0 = df_portfolio['Closing Date'].iloc[0] + pd.DateOffset(days=90)
+
+    # Calcular las fechas de ingresos y agregarlas al nuevo DataFrame
+    for i in range(economic_life):  # Usar la vida económica especificada en lugar de len(df_portfolio)
+        df_new = df_new.append({'Number': i + 1, 'Revenue Date': t_0}, ignore_index=True)
+        t_0 += pd.DateOffset(days=90)
+
+    # Agregar la columna "Quarter Revenue" al DataFrame df_new
+    df_new['Quarter Revenue'] = 0  # Inicializar la columna con valores cero
+
+    # Iterar a través de las filas del DataFrame df_new
+    for index, row in df_new.iterrows():
+        revenue_date = row['Revenue Date']
+
+        # Encontrar el índice correspondiente en df_portfolio para las fechas de ingresos
+        idx = df_portfolio.index[df_portfolio['Closing Date'] <= revenue_date][-1]
+
+        # Comparar fechas y calcular "Quarter Revenue" en función de las condiciones
+        if df_portfolio['SC Start Date'][idx] > revenue_date:
+            df_new.at[index, 'Quarter Revenue'] = df_portfolio['FC Daily Cash Flow'][idx] * 90
+        else:
+            df_new.at[index, 'Quarter Revenue'] = df_portfolio['SC Daily Cash Flow'][idx] * 90
+
+    # Calcular NPV y agregarlo como una nueva columna
+    df_new['NPV'] = \
+        df_new['Quarter Revenue'] / (1 + discount_rate) ** (df_new.index // 4)
+
+    # Calcular ROI
+    npv = df_new['NPV'].sum()
+    investment = df_portfolio['Purchase Price'].sum()
+    roi = ((npv - investment) / investment) * 100
+
+    # Calcular TIR
+    cash_flows = df_new['NPV'].tolist()  # Usar valores de NPV para el cálculo de la TIR
+    irr = npf.irr(cash_flows)
+
+    # Exportar los ingresos trimestrales a Excel utilizando un administrador de contexto
+    with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
+        df_new.to_excel(writer, sheet_name='Quarterly Revenue', index=False)
+
+    return {'ROI': f"{roi:.2f} %", 'NPV': f"{npv:,.2f} USD", 'IRR': f"{irr:,.2f} %"}
+
 total_revenues = (df_portfolio['Remaining Lease Term (Days)']
                   * df_portfolio['Per Diem (Unit)']
                   * (df_portfolio['Contract Type'] != "Off Lease")).sum()
-
-print(f"Total Revenues under contract: {total_revenues:,.2f} USD")
 
 
 
 
 # OPEX
+
+print(f"Total Revenues under contract: {total_revenues:,.2f} USD")
+
 
 def storage_cost(row, days_off_lease):
     """
@@ -264,6 +332,9 @@ off lease. If the unit is not off-lease, the function returns 0, indicating no s
             return 1.10 * days_off_lease
     else:
         return 0
+
+
+
 
 
 df_portfolio['Storage Cost'] = df_portfolio.apply(lambda row: storage_cost(row, off_lease_days), axis=1)

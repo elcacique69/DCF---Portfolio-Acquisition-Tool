@@ -502,8 +502,7 @@ def cashflow_calculation(df_portfolio,
             quarters_rev = quarters_rev + array_values
 
     NPV = np.sum([x*1/(1+discount_rate)**(i+1) for i, x in enumerate(quarters_rev)])
-    ROI = (NPV/df_portfolio['Purchase Price'].sum() - 1) *100 
+    ROI = (NPV/df_portfolio['Purchase Price'].sum() - 1) *100
 
     return {'ROI': f"{ROI:,.2f} %",
             'NPV': f"{NPV:,.2f} USD"}
-
