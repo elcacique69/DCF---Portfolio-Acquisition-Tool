@@ -370,7 +370,8 @@ def calculate_hedge_payment(
                             sheet_name='SOFR')
     df_SOFR.fillna(method='ffill', inplace=True)
     
-    df_SOFR.sort_values(by='Effective Date', ascending=False, inplace=True)
+    df_SOFR.sort_values(by='observation_date', ascending=False, inplace=True)
+    df_SOFR.reset_index(drop=True, inplace=True)
     df_SOFR['SOFR'] = df_SOFR['SOFR']/100
 
     # Get the las available SOFR and the parameters for the GBM
@@ -422,14 +423,16 @@ def calculate_hedge_payment(
 
 
 # FUNCTION 4: CASHFLOW
-def cashflow_calculation(df_portfolio,
+def cashflow_calculation(path_portfolio,
                          insurance_fees,
                          agency_fees,
                          handling_fees,
                          bad_debt,
                          discount_rate,
                          pd_ev):
-    
+     
+    df_portfolio = pd.read_excel(path_portfolio, sheet_name='Planned Portfolio')
+
     # Convert to date time
     df_portfolio['End Contract Date'] = pd.to_datetime(df_portfolio['End Contract Date'])
     df_portfolio['Closing Date'] = pd.to_datetime(df_portfolio['Closing Date'])
