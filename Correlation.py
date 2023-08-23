@@ -2,7 +2,7 @@
 import pandas as pd
 
 # load data frame
-file_path = '/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/Coorelation.xlsx'
+file_path = r'C:\Users\camil\Documents\GitHub\DCF---Portfolio-Acquisition-Tool\Coorelation.xlsx'
 df = pd.read_excel(file_path)
 
 # Calculate the PD Change

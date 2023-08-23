@@ -428,6 +428,8 @@ def cashflow_calculation(path_portfolio,
                          agency_fees,
                          handling_fees,
                          bad_debt,
+                         NOTIONAL,
+                         NUM_PAYMENTS,
                          discount_rate,
                          pd_ev):
      
@@ -504,8 +506,13 @@ def cashflow_calculation(path_portfolio,
 
             quarters_rev = quarters_rev + array_values
 
-    NPV = np.sum([x*1/(1+discount_rate)**(i+1) for i, x in enumerate(quarters_rev)])
+    NPV = np.sum([x*1/(1+discount_rate)**(i+1) for i, x in enumerate(quarters_rev)]) + calculate_hedge_payment(path_portfolio,
+                                                                                                               NOTIONAL,
+                                                                                                               NUM_PAYMENTS,
+                                                                                                               FLOOR = 0.0175, 
+                                                                                                               CAP = 0.03,
+                                                                                                               RATE_DAY_COUNT_FRACTION = 90/360.0)['Hedge']
     ROI = (NPV/df_portfolio['Purchase Price'].sum() - 1) *100
 
-    return {'ROI': f"{ROI:,.2f} %",
-            'NPV': f"{NPV:,.2f} USD"}
+    return {'ROI': ROI,
+            'NPV': NPV}
