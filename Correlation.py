@@ -12,10 +12,7 @@ df["PD Change"] = df["PD"].diff()
 columns_for_correlation = [
     "PD Change",
     "Used Containers Price",
-    "New Container Price",
-    "Replacement",
-    "Operating Ratio",
-    "World GDP"
+    "New Container Price"
 ]
 
 # Calculate correlation matrix
