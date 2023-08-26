@@ -433,15 +433,15 @@ def cashflow_calculation(path_portfolio,
                          NOTIONAL,
                          NUM_PAYMENTS,
                          discount_rate,
-                         container_mapping,
+                         rv_ev,
                          pd_ev):
      
     df_portfolio = pd.read_excel(path_portfolio, sheet_name='Planned Portfolio')
 
     container_mapping = {
-        "20'DC": 1000,
-        "40'DC": 1200,
-        "40'HC": 1400
+        "20'DC": 1000 * rv_ev,
+        "40'DC": 1200 * rv_ev,
+        "40'HC": 1400 * rv_ev
     }
 
     # New column RV
