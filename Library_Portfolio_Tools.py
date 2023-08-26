@@ -423,6 +423,8 @@ def calculate_hedge_payment(
 
 
 # FUNCTION 4: CASHFLOW
+
+# Define your container_mapping dictionary
 def cashflow_calculation(path_portfolio,
                          insurance_fees,
                          agency_fees,
@@ -431,9 +433,19 @@ def cashflow_calculation(path_portfolio,
                          NOTIONAL,
                          NUM_PAYMENTS,
                          discount_rate,
+                         container_mapping,
                          pd_ev):
      
     df_portfolio = pd.read_excel(path_portfolio, sheet_name='Planned Portfolio')
+
+    container_mapping = {
+        "20'DC": 1000,
+        "40'DC": 1200,
+        "40'HC": 1400
+    }
+
+    # New column RV
+    df_portfolio['RV'] = df_portfolio['Type'].apply(lambda x: container_mapping.get(x, 0))
 
     # Convert to date time
     df_portfolio['End Contract Date'] = pd.to_datetime(df_portfolio['End Contract Date'])
