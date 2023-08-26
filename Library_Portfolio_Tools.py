@@ -439,9 +439,9 @@ def cashflow_calculation(path_portfolio,
     df_portfolio = pd.read_excel(path_portfolio, sheet_name='Planned Portfolio')
 
     container_mapping = {
-        "20'DC": 1000 * rv_ev,
-        "40'DC": 1200 * rv_ev,
-        "40'HC": 1400 * rv_ev
+        "20'DC": 1000 * (1 + rv_ev),
+        "40'DC": 1200 * (1 + rv_ev),
+        "40'HC": 1400 * (1 + rv_ev)
     }
 
     # New column RV
