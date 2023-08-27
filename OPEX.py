@@ -1,107 +1,63 @@
-from datetime import datetime
-
-import numpy as np
 import pandas as pd
-import numpy_financial as npf
+from tabulate import tabulate  # You'll need to install this library if not already done
 
+def analyze_portfolio(path_portfolio, 
+                      export_path
+                      ):
+    
+    rows = len(path_portfolio)
+    
+    # Calculate the proportion of leased equipment
+    leased = len(path_portfolio[path_portfolio["Current Status"] == "On lease"])
+    equipment_leased = leased / rows
+    equipment_not_leased = 1 - equipment_leased
+    
+    # Create a DataFrame with only non-leased equipment
+    non_leased_df = path_portfolio[path_portfolio["Current Status"] == "Off Lease"]
+    
+    # Calculate the total NBV of non-leased equipment
+    total_non_leased_nbv = non_leased_df["Purchase Price"].sum()
+    
+    # Calculate the total NBV of all equipment
+    total_nbv = path_portfolio["Purchase Price"].sum()
+    
+    # Calculate the proportion of NBV of non-leased equipment to the total NBV
+    non_leased_nbv_proportion = total_non_leased_nbv / total_nbv
+    
+    # Specify container types
+    container_types = ["20'DC", "40'DC", "40'HC"]
+    
+    # Create a list to store container sum data
+    container_sum_data = []
+    for container_type in container_types:
+        filtered_df = non_leased_df[non_leased_df['Type'] == container_type]
+        sum_purchase_price = filtered_df['Purchase Price'].sum()
+        container_sum_data.append({'Metric': f'{container_type} Purchase Price', 'Value': sum_purchase_price})
+    
+    # Create a DataFrame for container sum data
+    container_sum_df = pd.DataFrame(container_sum_data)
+    
+    # Create a sample DataFrame for the Dashboard sheet
+    dashboard_data = {
+        'Metric': ['Total NBV of non-leased equipment', 'NBV proportion of non-leased equipment'],
+        'Value': [total_non_leased_nbv, f"{non_leased_nbv_proportion * 100:.2f}%"]
+    }
+    dashboard_df = pd.DataFrame(dashboard_data)
+    
+    # Create an Excel writer object
+    with pd.ExcelWriter(export_path, engine='xlsxwriter') as writer:
+        # Write the DataFrames to the respective sheets
+        non_leased_df.to_excel(writer, sheet_name='Non Leased Equipment', index=False)
+        dashboard_df.to_excel(writer, sheet_name='Dashboard', index=False)
+        
+        # Calculate the start row for the container sum DataFrame
+        start_row = dashboard_df.shape[0] + 2
+        container_sum_df.to_excel(writer, sheet_name='Dashboard', startrow=start_row, index=False)
+        
+    return{"Analysis results saved to Excel file"}
 
-def cashflow_calculation(df_portfolio,
-                         insurance_fees,
-                         agency_fees,
-                         handling_fees,
-                         bad_debt,
-                         discount_rate,
-                         pd_ev):
-    # Convert to date time
-    df_portfolio['End Contract Date'] = pd.to_datetime(df_portfolio['End Contract Date'])
-    df_portfolio['Closing Date'] = pd.to_datetime(df_portfolio['Closing Date'])
+# Example usage
+input_df = pd.read_excel("/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/Data_Set_Closing.xlsx")  # Replace with your Excel data file
+export_path = "/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/Off_Lease_Units.xlsx"  # Replace with your desired output Excel file path
 
-    # Remaining contract days
-    df_portfolio['Remaining Contract (days)'] = (
-                df_portfolio['End Contract Date'] - df_portfolio['Closing Date']).dt.days
-    df_portfolio['Contract Remaining Quarters'] = df_portfolio['Remaining Contract (days)'] / 90
-
-    # Remaining economic life (only used for the Residual Value)
-    df_portfolio['15 Years Date'] = df_portfolio['Manufacturing Date'] + pd.DateOffset(years=15)
-    df_portfolio['Lifecycle Remaining Days'] = (df_portfolio['15 Years Date'] - df_portfolio['Closing Date']).dt.days
-    df_portfolio['Lifecycle Remaining Quarters'] = df_portfolio['Lifecycle Remaining Days'] / 90
-
-    # Economic life second contract
-    df_portfolio['Remaining Days SC'] = (df_portfolio['15 Years Date'] - df_portfolio['End Contract Date']).dt.days
-    df_portfolio['Remaining Days SC'] = [x if x > 0.0 else 0.0 for x in df_portfolio['Remaining Days SC']]
-    df_portfolio['Remaining Quarters SC'] = df_portfolio['Remaining Days SC'] / 90
-
-    # Create new columns for OPEX
-    df_portfolio['Per Diem Cost Multiplier'] = insurance_fees + agency_fees + bad_debt + handling_fees
-    df_portfolio['Total OPEX'] = df_portfolio['Per Diem (Unit)'] * df_portfolio['Per Diem Cost Multiplier']
-    df_portfolio['Daily Cash Flow'] = df_portfolio['Per Diem (Unit)'] - df_portfolio['Total OPEX']
-    df_portfolio['Daily Cash Flow SC'] = df_portfolio['Per Diem (Unit)'] * (1 + pd_ev) - df_portfolio['Total OPEX']
-
-    cols_to_keep = ['RV',
-                    'Remaining Contract (days)',
-                    'Contract Remaining Quarters',
-                    'Lifecycle Remaining Days',
-                    'Lifecycle Remaining Quarters',
-                    'Remaining Days SC',
-                    'Remaining Quarters SC',
-                    'Daily Cash Flow',
-                    'Daily Cash Flow SC']
-
-    df_portfolio_Q = df_portfolio[cols_to_keep]
-
-    groups = df_portfolio_Q['Lifecycle Remaining Quarters'].unique()
-    df_grouped = df_portfolio_Q.groupby(by='Lifecycle Remaining Quarters')
-
-    # 0 : Index, 1 : RV
-    # 2 : Remaining Contract (days)
-    # 3 : Contract Remaining Quarters
-    # 4 : Lifecycle Remaining Days
-    # 5 : Lifecycle Remaining Quarters
-    # 6 : Remaining Days SC
-    # 7 : Remaining Quarters SC
-    # 8 : Daily Cash Flow
-    # 9 : Daily Cash Flow S
-
-    quarters_rev = np.zeros(15 * 4)
-    for g in groups:
-        for row in df_grouped.get_group(g).itertuples():
-            # First Contract:
-            array_values = np.full(int(row[3]), row[8] * 90)
-            # Add RV first contract and remainder of last Quarter
-            rv_rem = row[1] + (row[3] - int(row[3])) * 90 * row[8] * ((1 + discount_rate) ** (1 - row[3] - int(row[3])))
-            array_values = np.append(array_values, rv_rem)
-            # Second contract:
-            array_values = np.append(array_values, np.full(int(row[7]), row[9] * 90))
-            # Add RV second contract and remainder of last Quarter
-            if row[7] == 0:
-                rv_sc = 0
-            elif row[7] != 0:
-                rv_sc = row[1]
-            rem = (row[7] - int(row[7])) * 90 * row[9] * (1 + discount_rate) ** (1 - (row[7] - int(row[7])))
-            array_values = np.append(array_values, rv_sc + rem)
-
-            array_values.resize(15 * 4, refcheck=False)
-
-            quarters_rev = quarters_rev + array_values
-
-    NPV = np.sum([x * 1 / (1 + discount_rate) ** (i + 1) for i, x in enumerate(quarters_rev)])
-    ROI = (NPV / df_portfolio['Purchase Price'].sum() - 1) * 100
-
-    cash_flows = -df_portfolio['Purchase Price']  # Initial investments are negative
-    cash_flows = cash_flows + quarters_rev / (1 + 0.01794847) ** np.arange(1, 15 * 4 + 1)  # Add discounted cash flows
-
-    return {'ROI': f"{ROI:,.2f} %",
-            'NPV': f"{NPV:,.2f} USD"}
-
-excel_path = '/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/Data_Set_Closing.xlsx'
-df_portfolio = pd.read_excel(excel_path, sheet_name='Planned Portfolio')
-
-dcf = cashflow_calculation(df_portfolio,
-                           0.003,  # Insurance Fees
-                           0.007,  # Agency Fees
-                           0.002,  # Handling Fees
-                           0.005,  # Bad debt
-                           0.01794847,  # Discount Rate
-                           0.06)  # Per Diem Evolution
-
-print(dcf)
+analyze_portfolio(input_df, export_path)
