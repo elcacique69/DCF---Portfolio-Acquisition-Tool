@@ -71,13 +71,13 @@ def bank_eligibility_check(
 
         # Convenant test:
         if nbv_sum >= threshold:
-            print(f"The leesse {lessee} is in breach for the contentration convenant {threshold}")
+            print(f"BREACH: The leesse {lessee} is in breach for the contentration convenant {threshold}")
             dict_concentration_breach = {lessee:df_lessee}
         else:
             dict_concentration_breach = {}
 
     if dict_concentration_breach == {}:
-        dict_concentration_breach = "No concentration convenant breach"
+        dict_concentration_breach = "NO BREACH"
 
 
     #########################################
@@ -94,7 +94,7 @@ def bank_eligibility_check(
     if closing_advance_rate > ADVANCE_RATE:
         covenant_advance_rate = f"BREACH: The Advance Rate ({closing_advance_rate:,.2f}%) is above ({ADVANCE_RATE:,.2f}%)"
     else:
-        covenant_advance_rate = f"No Advance Rate breaches (Advance Rate {closing_advance_rate:,.2f}%)"
+        covenant_advance_rate = f"NO BREACH: Advance Rate {closing_advance_rate:,.2f}%"
 
     #########################################
     ## 3) AGE COVENANT
@@ -117,7 +117,7 @@ def bank_eligibility_check(
     if weighted_average_age > 9:
         covenant_weight_avg_age = f"BREACH: The weighted average age {weighted_average_age:,.2f} of the portfolio is above 9 years."
     else:
-        covenant_weight_avg_age = "No NBV weighted average age breach"
+        covenant_weight_avg_age = f"NO BREACH: weighted avg age {weighted_average_age:,.2f}"
 
 
     #########################################
@@ -134,7 +134,7 @@ def bank_eligibility_check(
     if ceu_purchase_price > 2900:
         covenant_nbv_ceu = f"BREACH: The NBV by CEU is: {ceu_purchase_price:,.2f} USD. The limit is 2900 USD"
     else:
-        covenant_nbv_ceu = f"No NBV by CEU breach: {ceu_purchase_price:,.2f} USD. The limit is 2900 USD"
+        covenant_nbv_ceu = f"NO BREACH: NBV by CEU: {ceu_purchase_price:,.2f} USD. The limit is 2900 USD"
     
     #########################################
     ## 6) MANUFACTURER COVENANT
@@ -162,7 +162,7 @@ def bank_eligibility_check(
         df_not_manuf.to_excel(export_path, index=False, sheet_name=sheet_name)
         covenant_manufacturer = f"BREACH: Non-matching containers exported to: {export_path} (Sheet: {sheet_name})"
     else:
-        covenant_manufacturer = "No Manufacturer breaches have been observed"
+        covenant_manufacturer = "NO BREACH: acceptable manufacturers"
 
     ###################################################################
     # 7) Average Remaining Lease Term: for containers built after 2019
@@ -172,16 +172,16 @@ def bank_eligibility_check(
     df_new_containers = df_portfolio[df_portfolio['Vintage'] > 2019].copy()
    
     # Calculate remaining lease term
-    df_new_containers['Remaining Lease Term'] = (df_new_containers['End Contract Date'] - closing_date).dt.days
+    df_new_containers['Remaining Lease Term'] = ((df_new_containers['End Contract Date'] - closing_date).dt.days) / 365
 
     # Calculate weighted average remaining lease term
     weighted_average = (df_new_containers['Remaining Lease Term'] * df_new_containers['Purchase Price']).sum() / df_new_containers['Purchase Price'].sum()
 
     # Verify if the CEU Purchase Price is above threshold
     if weighted_average < 5:
-        covenant_avg_lease = f"BREACH: the minimum weighted remaining lease term for equipment manufactured after 2019 must be 5 years. Actual RLT : {weighted_average:,.2f}"
+        covenant_avg_lease = f"BREACH: the minimum weighted remaining lease term must be 5 years. Actual RLT : {weighted_average:,.2f}"
     else:
-        covenant_avg_lease = f"No Containers Manufactured after 2019 remaining lease term breaches (Avg Remaing Lease Term {weighted_average:,.2f} years)"
+        covenant_avg_lease = f"NO BREACH: (Avg Remaing Lease Term {weighted_average:,.2f} years)"
 
     ###################################################################
     # 8) Off Lease NBV portfolio concentration
@@ -200,7 +200,7 @@ def bank_eligibility_check(
     if off_lease_proportion > 5:
         covenant_offlease_concentration = f"BREACH: The Off Lease proportion needs to be below 5%. Actual : {off_lease_proportion:,.2f}"
     else:
-        covenant_offlease_concentration = f"No Off lease proportion breaches (Proportion {off_lease_proportion:,.2f}%)"
+        covenant_offlease_concentration = f"NO BREACH: Off-Lease Proportion {off_lease_proportion:,.2f}%"
 
     # Specify the export file path for the new Excel file
     ### To replace for company folder on implementation 
@@ -229,7 +229,7 @@ def bank_eligibility_check(
     if finance_lease_proportion > 30:
         covenant_financelease_concentration = f"BREACH: The Finance Lease proportion needs to be below 30%. Actual: {finance_lease_proportion:,.2f}"
     else:
-       covenant_financelease_concentration = f"No Finance lease proportion breaches (Proportion {finance_lease_proportion:,.2f}%)"
+       covenant_financelease_concentration = f"NO BREACH: Finance-Lease proportion Proportion {finance_lease_proportion:,.2f}%"
 
 
     ##### New Features for Revenues:
@@ -250,12 +250,12 @@ def bank_eligibility_check(
     #### Output
     output = {"Covenants":{'4.a) Manufactured by an Acceptable Manufacturer': covenant_manufacturer,
                             '4.b) NBV Weighted Average Age of such Equipment': covenant_weight_avg_age,
-                            '4.c) Average Remaining Lease Term of the such Equipment manufactured after 2019' : covenant_avg_lease,
+                            '4.c) Avg. Lease Term of Post-2019 Equipment' : covenant_avg_lease,
                             '4.d) Total Purchase Price by CEU': covenant_nbv_ceu,
                             '5.19) Concentration Limits': dict_concentration_breach,
-                            'Advance Rate cheking': covenant_advance_rate,
-                            '5.13) OFF Lease portfolio NBV concentration' : covenant_offlease_concentration,
-                            '5.17) Finance Lease portfolio NBV concentration' : covenant_financelease_concentration},
+                            'Advance Rate Checking': covenant_advance_rate,
+                            '5.13) OFF Lease Fleet NBV concentration' : covenant_offlease_concentration,
+                            '5.17) Finance Lease Fleet NBV concentration' : covenant_financelease_concentration},
             "Portfolio":df_portfolio}
     
     return output 
@@ -264,23 +264,23 @@ def bank_eligibility_check(
 
 def off_lease_units(path_portfolio, export_path):
     # Read the portfolio Excel file into a DataFrame
-    portfolio_df = pd.read_excel(path_portfolio)
+    df_portfolio = pd.read_excel(path_portfolio)
 
-    rows = len(portfolio_df)
+    rows = len(df_portfolio)
 
     # Calculate the proportion of leased equipment
-    leased = len(portfolio_df[portfolio_df["Current Status"] == "On lease"])
+    leased = len(df_portfolio[df_portfolio["Current Status"] == "On lease"])
     equipment_leased = leased / rows
     equipment_not_leased = 1 - equipment_leased
 
     # Create a DataFrame with only non-leased equipment
-    non_leased_df = portfolio_df[portfolio_df["Current Status"] == "Off Lease"]
+    non_leased_df = df_portfolio[df_portfolio["Current Status"] == "Off Lease"]
 
     # Calculate the total NBV of non-leased equipment
     total_non_leased_nbv = non_leased_df["Purchase Price"].sum()
 
     # Calculate the total NBV of all equipment
-    total_nbv = portfolio_df["Purchase Price"].sum()
+    total_nbv = df_portfolio["Purchase Price"].sum()
 
     # Calculate the proportion of NBV of non-leased equipment to the total NBV
     non_leased_nbv_proportion = total_non_leased_nbv / total_nbv
@@ -294,7 +294,7 @@ def off_lease_units(path_portfolio, export_path):
 
     return output
 
-# FUNCTION 2 :  Function for debt calculation
+# FUNCTION 3 :  Function for debt calculation
 def debt_payment_and_interest(
                               path_df,
                               NUM_PAYMENTS,
@@ -350,7 +350,7 @@ def debt_payment_and_interest(
 
 
 
-# FUNCTION 3 : Function to calculate the Cap and floor rates and payments
+# FUNCTION 4 : Function to calculate the Cap and floor rates and payments
 def calculate_hedge_payment(
                             path_df,
                             NOTIONAL,
@@ -453,7 +453,7 @@ def calculate_hedge_payment(
 
 
 
-# FUNCTION 4: CASHFLOW
+# FUNCTION 5: CASHFLOW
 
 # Define your container_mapping dictionary
 def cashflow_calculation(path_portfolio,
@@ -555,7 +555,8 @@ def cashflow_calculation(path_portfolio,
                                                                                                                FLOOR = 0.0175, 
                                                                                                                CAP = 0.03,
                                                                                                                RATE_DAY_COUNT_FRACTION = 90/360.0)['Hedge']
-    ROI = (NPV/df_portfolio['Purchase Price'].sum() - 1) *100
+    ROI = ((NPV/df_portfolio['Purchase Price'].sum()) - 1)
 
     return {'ROI': ROI,
-            'NPV': NPV}
+            'NPV': NPV
+            }
