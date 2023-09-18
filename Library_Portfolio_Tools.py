@@ -683,7 +683,7 @@ def cash_flow(path_portfolio,
 
 
     # Export to Excel
-    df_revenues.to_excel('/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/testdcf.xlsx', index=False)
+    # df_revenues.to_excel('/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/testdcf.xlsx', index=False)
 
 
     return {'Operation NPV': portfolio_npv,
@@ -815,7 +815,7 @@ def cash_flow_table(path_portfolio,
 
 
     # Export to Excel
-    df_revenues.to_excel('/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/testdcf.xlsx', index=False)
+    # df_revenues.to_excel('/Users/carlosjosegonzalezacevedo/Documents/GitHub/DCF---Portfolio-Acquisition-Tool/testdcf.xlsx', index=False)
 
 
     return {'Operation NPV': f'{portfolio_npv:,.2f} USD',
