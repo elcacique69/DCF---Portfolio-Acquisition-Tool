@@ -573,7 +573,10 @@ def cash_flow(path_portfolio,
                     sell_fee,
                     rv_ev,
                     euribor_year,
-                    margin
+                    margin,
+                    TWDC,
+                    FTDC,
+                    FTHC
                     ):
     
     # Load Data Frame with portfolio data
@@ -583,9 +586,9 @@ def cash_flow(path_portfolio,
 
     # Establish RV for units, it's for calculate the portfolio value (NBV)
     container_mapping = {
-        "20'DC": 1100 * (1 + rv_ev),
-        "40'DC": 1320 * (1 + rv_ev),
-        "40'HC": 1540 * (1 + rv_ev)
+        "20'DC": TWDC * (1 + rv_ev),
+        "40'DC": FTDC * (1 + rv_ev),
+        "40'HC": FTHC * (1 + rv_ev)
     }
 
     df_portfolio['RV'] = df_portfolio['Type'].apply(lambda x: container_mapping.get(x, 0))
@@ -705,7 +708,10 @@ def cash_flow_table(path_portfolio,
                     sell_fee,
                     rv_ev,
                     euribor_year,
-                    margin
+                    margin,
+                    TWDC,
+                    FTDC,
+                    FTHC,
                     ):
     
     # Load Data Frame with portfolio data
@@ -715,9 +721,9 @@ def cash_flow_table(path_portfolio,
 
     # Establish RV for units, it's for calculate the portfolio value (NBV)
     container_mapping = {
-        "20'DC": 1100 * (1 + rv_ev),
-        "40'DC": 1320 * (1 + rv_ev),
-        "40'HC": 1540 * (1 + rv_ev)
+        "20'DC": TWDC * (1 + rv_ev),
+        "40'DC": FTDC * (1 + rv_ev),
+        "40'HC": FTHC * (1 + rv_ev)
     }
 
     df_portfolio['RV'] = df_portfolio['Type'].apply(lambda x: container_mapping.get(x, 0))
@@ -805,11 +811,12 @@ def cash_flow_table(path_portfolio,
     df_revenues['NPV Leasing Revenues'] = df_revenues['Net Leasing Revenues'] / (1 + wacc) ** df_revenues['Row Number']
 
     # RATES: NPV (USD), ROI (%), IRR (%)
+    investment = df_portfolio['Purchase Price'].sum()
     portfolio_npv = df_revenues['NPV Leasing Revenues'].sum()
-    portfolio_margin = df_revenues['Net Leasing Revenues'].sum() - df_portfolio['Purchase Price'].sum()
-    portfolio_margin_npv = df_revenues['NPV Leasing Revenues'].sum() - df_portfolio['Purchase Price'].sum()
-    portfolio_roi = (portfolio_margin / df_portfolio['Purchase Price'].sum()) * 100
-    portfolio_npv_roi = ((df_revenues['NPV Leasing Revenues'].sum() - df_portfolio['Purchase Price'].sum()) / df_portfolio['Purchase Price'].sum()) * 100
+    portfolio_margin = df_revenues['Net Leasing Revenues'].sum() - investment
+    portfolio_margin_npv = portfolio_npv - investment
+    portfolio_roi = (portfolio_margin / investment) * 100
+    portfolio_npv_roi = (portfolio_margin_npv / investment) * 100
     portfolio_annual_roi = portfolio_roi / operation_period_years
     portfolio_annual_roi_npv = portfolio_annual_roi / operation_period_years
 
@@ -819,8 +826,10 @@ def cash_flow_table(path_portfolio,
 
 
     return {'Operation NPV': f'{portfolio_npv:,.2f} USD',
+            'Investment Amount': f'{investment:,.2f} USD',
             'Operation NPV Profit': f'{portfolio_margin_npv:,.2f} USD',
             'Portfolio ROI (NPV Leasing Revenues)': f'{portfolio_npv_roi:,.2f} %',
             'Discount Rate' : f'{wacc_year:,.2f} %',
-            'Operation Period (Days)': operation_period,
-            'Operation Period (Years)': operation_period_years}
+            'Operation Period (Days)': f'{operation_period:,.2f}',
+            'Operation Period (Years)': f'{operation_period_years:,.2f}'
+            }
